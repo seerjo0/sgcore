@@ -2,123 +2,112 @@
 
 **A lightweight, modular, self-hosted CMS built with Laravel — own your content, your site, and your data.**
 
-![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel\&logoColor=white)
-![PHP](https://img.shields.io/badge/PHP-8.3%2B-777BB4?logo=php\&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss\&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.3%2B-777BB4?logo=php&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Self-Hosted](https://img.shields.io/badge/Self--Hosted-100%25-blue)
 ![Free](https://img.shields.io/badge/100%25-Free-success)
 
 ## What is sgcore?
 
-**sgcore** is a modular, self-hosted and 100% free Content Management System built on **Laravel 13**. It gives you everything you need to create and manage a complete website — from institutional websites and blogs to portfolios — through its own administration panel in Brazilian Portuguese.
+sgcore is a modular, self-hosted CMS built on Laravel 13. It's completely free and gives you everything you need to run a full website — whether that's an institutional site, a blog, or a portfolio — through an admin panel in Brazilian Portuguese.
 
-Designed with developers and web designers in mind, sgcore keeps the foundation flexible while giving you practical tools for managing content, media, themes, menus and visual settings.
+It was built with developers and web designers in mind. The foundation stays flexible, but you also get practical tools for managing content, media, themes, menus, and visual settings without having to build everything from scratch.
 
-### Built-in resources
+Here's what comes included:
 
-* 🧩 Modular architecture
-* 🖥️ Self-hosted administration panel
-* 📝 Pages and rich-text content
-* 🖼️ Media library and galleries
-* 🎨 Customizable theme engine
-* 🧭 Nested menus
-* 👥 Admin and editor roles
-* 🔍 Built-in SEO settings
-* 🌗 Light and dark panel themes
-* ⚙️ Customizable administration path
+- Modular architecture
+- Self-hosted admin panel
+- Pages with rich-text content
+- Media library and galleries
+- Customizable theme engine
+- Nested menus
+- Admin and editor roles
+- SEO settings
+- Light and dark panel themes
+- Configurable admin path
 
 ## Why sgcore?
 
-* **Own your content** — Your website and its content are self-hosted under your control.
-* **No SaaS dependency** — Run sgcore on your own server instead of depending on a hosted CMS platform.
-* **No monthly cost** — sgcore is 100% free and released under the MIT license.
-* **Built to be extended** — Its modular architecture and flexible theme system make it suitable for developers and web designers who want control over their implementation.
+- **You own your content.** Everything is self-hosted, so your site and its data stay under your control.
+- **No SaaS dependency.** Run it on your own server instead of relying on a hosted platform.
+- **No monthly cost.** It's free and released under the MIT license.
+- **Built to be extended.** The modular architecture and theme system make it easy to adapt to whatever you're building.
 
 ## Features
 
 ### Modular architecture
 
-sgcore is organized into independent modules:
+The CMS is split into independent modules:
 
-* **Core**
-* **Installer**
-* **Auth**
-* **Media**
-* **Pages**
-* **Themes**
+- Core
+- Installer
+- Auth
+- Media
+- Pages
+- Themes
 
-This structure keeps the CMS organized and provides a solid foundation for customization.
+This keeps things organized and gives you a clean base to build on.
 
 ### Guided installation
 
-Choose how you want to install sgcore:
+You can install sgcore in two ways:
 
-* Web-based installation wizard available at `/instalar`
-* Command-line installation through Artisan
-* Optional sample content during installation
+- Web installer at `/instalar`
+- Command-line install via Artisan
+
+You also have the option to include sample content during installation.
 
 ### User roles and permissions
 
-Two user roles are included:
+Two roles come built in:
 
-* **Admin** — full administrative access
-* **Editor** — access controlled by area permissions
+- **Admin** — full access to everything
+- **Editor** — access limited by area permissions
 
 ### Media library
 
-Manage your website's media from a centralized library.
+Manage all your site's media from one place.
 
-* Image uploads
-* Automatic image resizing using GD
-* Sortable galleries
-* Reusable media selector in forms
+- Image uploads
+- Automatic resizing using GD
+- Sortable galleries
+- Reusable media selector in forms
 
 ### Pages and menus
 
-Create and organize your website content with:
+Create and organize content with:
 
-* Unique page slugs
-* Draft and published states
-* Sanitized rich-text content
-* Nested menus
+- Unique page slugs
+- Draft and published states
+- Sanitized rich-text content
+- Nested menus
 
 ### Theme engine
 
-Build themes your way with **HTML and Blade**.
+Build themes using HTML and Blade. sgcore ships with:
 
-sgcore includes:
+- 3 built-in themes
+- Theme import via validated ZIP files
+- Protection against Zip-Slip attacks during imports
+- Editable content slots available globally or per page
 
-* 3 built-in themes
-* Theme import through validated ZIP files
-* Protection against Zip-Slip attacks during theme imports
-* Editable content slots available globally or per page
-* Content slot types:
-
-  * Text
-  * Rich text
-  * Image
-  * Gallery
-  * Logo
+Content slot types include text, rich text, image, gallery, and logo.
 
 ### Visual customization
 
-Customize the appearance and identity of your site and administration panel.
+You can customize both the site and the admin panel:
 
-* Light and dark panel themes
-* 6 administration accent colors
-* Site name
-* Logo
-* Favicon
-* SEO title
-* SEO description
-* Open Graph settings
+- Light and dark panel themes
+- 6 admin accent colors
+- Site name, logo, and favicon
+- SEO title and description
+- Open Graph settings
 
-### Custom administration path
+### Custom admin path
 
-Change the default `/admin` path through the `ADMIN_PATH` environment variable.
-
-For example:
+Change the default `/admin` path using the `ADMIN_PATH` environment variable:
 
 ```bash
 ADMIN_PATH=/backend
@@ -132,39 +121,34 @@ ADMIN_PATH=/administrator
 
 ### Optional sample content
 
-During installation, you can choose to create sample content containing pages and a menu.
+During installation, you can opt to create sample pages and a menu to get started faster.
 
-### Brazilian Portuguese administration panel
+### Brazilian Portuguese admin panel
 
-The administration interface is available in **Brazilian Portuguese (pt-BR)**.
+The admin interface is in Brazilian Portuguese (pt-BR).
 
 ## Requirements
 
-### Server requirements
+You'll need the following:
 
-* [ ] PHP 8.3 or newer
-* [ ] Composer
-* [ ] Node.js and npm
-* [ ] MySQL or MariaDB
-* [ ] Nginx or Apache pointing to the project's `public/` directory
-* [ ] PHP `pdo_mysql` extension
-* [ ] PHP `gd` extension
-* [ ] PHP `fileinfo` extension
-* [ ] PHP `mbstring` extension
-* [ ] PHP `zip` extension
-* [ ] PHP `openssl` extension
+- PHP 8.3 or newer
+- Composer
+- Node.js and npm
+- MySQL or MariaDB
+- Nginx or Apache pointing to the project's `public/` directory
+- PHP extensions: `pdo_mysql`, `gd`, `fileinfo`, `mbstring`, `zip`, `openssl`
 
-For development, you can use Laravel's built-in server with `php artisan serve`.
+For local development, `php artisan serve` works fine.
 
-sgcore is developed and tested up to **PHP 8.5**.
+sgcore is developed and tested up to PHP 8.5.
 
 ## Installation (self-hosted)
 
-The following installation assumes you already have PHP 8.3+, Composer, Node.js/npm, MySQL or MariaDB, and a web server available.
+This assumes you already have PHP 8.3+, Composer, Node.js/npm, MySQL or MariaDB, and a web server set up.
 
 ### 1. Clone the repository
 
-Replace `<URL_DO_REPOSITORIO_NO_GITHUB>` with the repository URL:
+Replace `<URL_DO_REPOSITORIO_NO_GITHUB>` with the actual repository URL:
 
 ```bash
 git clone <URL_DO_REPOSITORIO_NO_GITHUB> sgcore && cd sgcore
@@ -178,7 +162,7 @@ composer install
 
 ### 3. Configure the environment
 
-Copy the example environment file:
+Copy the example env file:
 
 ```bash
 cp .env.example .env
@@ -212,25 +196,19 @@ php artisan storage:link
 
 ### 7. Install sgcore
 
-You can install sgcore using either the web installer or the command line.
+You can use either the web installer or the command line.
 
 #### Option A — Web installer
 
-Start your web server using Nginx/Apache or Laravel's development server:
+Start your server with Nginx/Apache or Laravel's dev server:
 
 ```bash
 php artisan serve
 ```
 
-Then open the installation wizard in your browser:
-
-```text
-/instalar
-```
+Then open `/instalar` in your browser.
 
 #### Option B — Command line
-
-Run:
 
 ```bash
 php artisan cms:install --db-host=127.0.0.1 --db-database=sgcore --db-username=root --db-password=... --admin-name="Seu Nome" --admin-email=voce@exemplo.com --admin-password=... --site-name="Meu Site" --sample
@@ -240,54 +218,50 @@ The `--sample` flag creates sample content.
 
 All `--db-*`, `--admin-*`, and `--site-name` options are optional and can be provided interactively.
 
-### 8. Access the administration panel
+### 8. Access the admin panel
 
-The default administration path is:
+The default path is:
 
 ```text
 /admin
 ```
 
-If you configured `ADMIN_PATH` in your `.env`, use your configured path instead.
+If you set `ADMIN_PATH` in your `.env`, use that instead.
 
 ### 9. Optional domain configuration
 
-You can point your domain through `APP_URL` in `.env`:
+Point your domain through `APP_URL` in `.env`:
 
 ```text
 APP_URL=<SEU_DOMINIO>
 ```
 
-Then configure your web server to point to the project's:
+Then configure your web server to point to the project's `public/` directory.
 
-```text
-public/
-```
-
-> **Production tip:** Never keep `APP_DEBUG=true` in production.
+> **Production tip:** Never leave `APP_DEBUG=true` in production.
 
 ## First steps
 
 Once sgcore is installed:
 
-1. **Log in** to the administration panel.
-2. **Create your pages** and organize them using nested menus.
-3. **Upload your media** to the media library and create galleries when needed.
-4. **Choose and customize your theme** using the available theme system.
-5. **Configure your site identity**, including its name, logo and favicon.
-6. **Configure SEO settings**, including title, description and Open Graph information.
-7. **Customize the administration panel** with light/dark mode and your preferred accent color.
-8. **Change the admin path** through `ADMIN_PATH` if you want to use a custom administration URL.
+1. Log in to the admin panel.
+2. Create your pages and organize them with nested menus.
+3. Upload media and create galleries as needed.
+4. Pick and customize a theme.
+5. Set up your site identity — name, logo, favicon.
+6. Configure SEO settings (title, description, Open Graph).
+7. Customize the admin panel with light/dark mode and an accent color.
+8. Change the admin path via `ADMIN_PATH` if you want a custom URL.
 
 ## Support & donate
 
-sgcore is built and shared freely. If the project is useful to you and you'd like to support its continued development, your contribution is genuinely appreciated.
+sgcore is built and shared freely. If it's useful to you and you'd like to support its continued development, any contribution is genuinely appreciated.
 
-* [Donate via LivePix](https://livepix.gg/seerjo0)
-* [Donate via Ko-fi](https://ko-fi.com/seerjo0)
+- [Donate via LivePix](https://livepix.gg/seerjo0)
+- [Donate via Ko-fi](https://ko-fi.com/seerjo0)
 
 ## License
 
-sgcore is open source software licensed under the **MIT License**.
+sgcore is open source software licensed under the MIT License.
 
-You are free to use, modify, and distribute it in accordance with the terms of the MIT License.
+You're free to use, modify, and distribute it under the terms of the MIT License.
