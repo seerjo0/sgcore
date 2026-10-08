@@ -1,0 +1,27 @@
+{
+    "name": "Galeria",
+    "version": "1.0.0",
+    "description": "Fundo escuro com a galeria em destaque (mosaico) — ideal para portfólios.",
+    "author": "sgcore",
+    "templates": {
+        "home": "index.html",
+        "page": "page.html",
+        "404": "404.html"
+    },
+    "slots": {
+        "site.logo": {"type": "image", "scope": "global", "label": "Logo do site"},
+        "site.name": {"type": "text", "scope": "global", "label": "Nome do site"},
+        "site.slogan": {"type": "text", "scope": "global", "label": "Slogan"},
+        "site.copyright": {"type": "text", "scope": "global", "label": "Texto do rodapé"},
+        "home.hero_title": {"type": "text", "scope": "page", "label": "Título do hero", "default": "Portfólio"},
+        "home.hero_subtitle": {"type": "text", "scope": "page", "label": "Subtítulo do hero", "default": ""},
+        "home.hero_image": {"type": "image", "scope": "page", "label": "Imagem do hero"},
+        "home.gallery": {"type": "gallery", "scope": "page", "label": "Galeria da home"},
+        "page.title": {"type": "text", "scope": "page", "label": "Título da página"},
+        "page.body": {"type": "richtext", "scope": "page", "label": "Conteúdo da página"}
+    },
+    "menus": {
+        "primary": "Principal (topo)",
+        "footer": "Rodapé"
+    }
+}

@@ -1,0 +1,265 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/*
+|--------------------------------------------------------------------------
+| Cor principal do admin
+|--------------------------------------------------------------------------
+| As utilities `primary-*` leem `--admin-primary-*`, que são remapeadas em
+| tempo de execução pelo atributo [data-admin-color] no <html> (definido no
+| layout conforme Configurações > Admin). `@theme inline` faz as utilities
+| usarem a var diretamente, sem passar por `:root` fixo.
+*/
+
+@theme inline {
+    --color-primary-50: var(--admin-primary-50);
+    --color-primary-100: var(--admin-primary-100);
+    --color-primary-200: var(--admin-primary-200);
+    --color-primary-300: var(--admin-primary-300);
+    --color-primary-400: var(--admin-primary-400);
+    --color-primary-500: var(--admin-primary-500);
+    --color-primary-600: var(--admin-primary-600);
+    --color-primary-700: var(--admin-primary-700);
+    --color-primary-800: var(--admin-primary-800);
+    --color-primary-900: var(--admin-primary-900);
+    --color-primary-950: var(--admin-primary-950);
+}
+
+/* Paletas por cor (steps 50–950). `:root` primeiro = azul por padrão;
+   os demais blocos têm a mesma especificidade e vencem por ordem. */
+:root,
+[data-admin-color='azul'] {
+    --admin-pal-50: #eef2ff;
+    --admin-pal-100: #e0e7ff;
+    --admin-pal-200: #c7d2fe;
+    --admin-pal-300: #a5b4fc;
+    --admin-pal-400: #818cf8;
+    --admin-pal-500: #6366f1;
+    --admin-pal-600: #4f46e5;
+    --admin-pal-700: #4338ca;
+    --admin-pal-800: #3730a3;
+    --admin-pal-900: #312e81;
+    --admin-pal-950: #1e1b4b;
+}
+
+[data-admin-color='amarelo'] {
+    --admin-pal-50: #fefce8;
+    --admin-pal-100: #fef9c3;
+    --admin-pal-200: #fef08a;
+    --admin-pal-300: #fde047;
+    --admin-pal-400: #facc15;
+    --admin-pal-500: #eab308;
+    --admin-pal-600: #ca8a04;
+    --admin-pal-700: #a16207;
+    --admin-pal-800: #854d0e;
+    --admin-pal-900: #713f12;
+    --admin-pal-950: #422006;
+}
+
+[data-admin-color='verde'] {
+    --admin-pal-50: #ecfdf5;
+    --admin-pal-100: #d1fae5;
+    --admin-pal-200: #a7f3d0;
+    --admin-pal-300: #6ee7b7;
+    --admin-pal-400: #34d399;
+    --admin-pal-500: #10b981;
+    --admin-pal-600: #059669;
+    --admin-pal-700: #047857;
+    --admin-pal-800: #065f46;
+    --admin-pal-900: #064e3b;
+    --admin-pal-950: #022c22;
+}
+
+[data-admin-color='roxo'] {
+    --admin-pal-50: #f5f3ff;
+    --admin-pal-100: #ede9fe;
+    --admin-pal-200: #ddd6fe;
+    --admin-pal-300: #c4b5fd;
+    --admin-pal-400: #a78bfa;
+    --admin-pal-500: #8b5cf6;
+    --admin-pal-600: #7c3aed;
+    --admin-pal-700: #6d28d9;
+    --admin-pal-800: #5b21b6;
+    --admin-pal-900: #4c1d95;
+    --admin-pal-950: #2e1065;
+}
+
+[data-admin-color='vermelho'] {
+    --admin-pal-50: #fef2f2;
+    --admin-pal-100: #fee2e2;
+    --admin-pal-200: #fecaca;
+    --admin-pal-300: #fca5a5;
+    --admin-pal-400: #f87171;
+    --admin-pal-500: #ef4444;
+    --admin-pal-600: #dc2626;
+    --admin-pal-700: #b91c1c;
+    --admin-pal-800: #991b1b;
+    --admin-pal-900: #7f1d1d;
+    --admin-pal-950: #450a0a;
+}
+
+[data-admin-color='rosa'] {
+    --admin-pal-50: #fdf2f8;
+    --admin-pal-100: #fce7f3;
+    --admin-pal-200: #fbcfe8;
+    --admin-pal-300: #f9a8d4;
+    --admin-pal-400: #f472b6;
+    --admin-pal-500: #ec4899;
+    --admin-pal-600: #db2777;
+    --admin-pal-700: #be185d;
+    --admin-pal-800: #9d174d;
+    --admin-pal-900: #831843;
+    --admin-pal-950: #500724;
+}
+
+/* Passo da paleta → utility (modo claro). */
+:root {
+    --admin-primary-50: var(--admin-pal-50);
+    --admin-primary-100: var(--admin-pal-100);
+    --admin-primary-200: var(--admin-pal-200);
+    --admin-primary-300: var(--admin-pal-300);
+    --admin-primary-400: var(--admin-pal-400);
+    --admin-primary-500: var(--admin-pal-500);
+    --admin-primary-600: var(--admin-pal-600);
+    --admin-primary-700: var(--admin-pal-700);
+    --admin-primary-800: var(--admin-pal-800);
+    --admin-primary-900: var(--admin-pal-900);
+    --admin-primary-950: var(--admin-pal-950);
+}
+
+/* Modo escuro: degraus claros viram escuros e os textos escuros, claros
+   (300 fica como anel/foco → 600 mantém visibilidade). */
+html.dark {
+    --admin-primary-50: var(--admin-pal-950);
+    --admin-primary-100: var(--admin-pal-900);
+    --admin-primary-200: var(--admin-pal-800);
+    --admin-primary-300: var(--admin-pal-600);
+    --admin-primary-700: var(--admin-pal-300);
+    --admin-primary-800: var(--admin-pal-200);
+    --admin-primary-900: var(--admin-pal-100);
+    --admin-primary-950: var(--admin-pal-50);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Modo escuro do admin (camada central)
+|--------------------------------------------------------------------------
+| Só os elementos DENTRO de `.admin-surface` são remapeados: a coluna de
+| conteúdo do painel (layout) e o card do login. A sidebar já é escura e
+| fica de fora. Estas regras ficam FORA de @layer, então vencem as
+| utilities do Tailwind — para exceções pontuais use regras `.dark` aqui,
+| não utilities `dark:` nos views do admin.
+*/
+
+.dark body.bg-slate-100 {
+    background-color: #09090b;
+    color: #fafafa;
+}
+
+/* Superfícies */
+.dark .admin-surface .bg-white {
+    background-color: #18181b;
+}
+
+.dark .admin-surface .bg-slate-50,
+.dark .admin-surface .hover\:bg-slate-50:hover {
+    background-color: #27272a;
+}
+
+.dark .admin-surface .bg-slate-100,
+.dark .admin-surface .hover\:bg-slate-100:hover {
+    background-color: #09090b;
+}
+
+/* Bordas */
+.dark .admin-surface .border-slate-100,
+.dark .admin-surface .border-slate-200 {
+    border-color: #27272a;
+}
+
+.dark .admin-surface .border-slate-300 {
+    border-color: #3f3f46;
+}
+
+.dark .admin-surface .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #27272a;
+}
+
+/* Texto */
+.dark .admin-surface .text-slate-800 {
+    color: #fafafa;
+}
+
+.dark .admin-surface .text-slate-700,
+.dark .admin-surface .hover\:text-slate-700:hover {
+    color: #d4d4d8;
+}
+
+.dark .admin-surface .text-slate-600,
+.dark .admin-surface .hover\:text-slate-600:hover {
+    color: #a1a1aa;
+}
+
+.dark .admin-surface .text-slate-500 {
+    color: #a1a1aa;
+}
+
+.dark .admin-surface .text-slate-400 {
+    color: #71717a;
+}
+
+/* Sucesso */
+.dark .admin-surface .bg-emerald-50,
+.dark .admin-surface .bg-emerald-100 {
+    background-color: #022c22;
+}
+
+.dark .admin-surface .border-emerald-200 {
+    border-color: #065f46;
+}
+
+.dark .admin-surface .text-emerald-700 {
+    color: #6ee7b7;
+}
+
+.dark .admin-surface .text-emerald-600 {
+    color: #34d399;
+}
+
+/* Erro */
+.dark .admin-surface .bg-red-50,
+.dark .admin-surface .bg-red-100 {
+    background-color: #450a0a;
+}
+
+.dark .admin-surface .border-red-200 {
+    border-color: #7f1d1d;
+}
+
+.dark .admin-surface .text-red-700 {
+    color: #fca5a5;
+}
+
+.dark .admin-surface .text-red-600,
+.dark .admin-surface .hover\:text-red-600:hover,
+.dark .admin-surface .hover\:text-red-500:hover {
+    color: #f87171;
+}
+
+/* Aviso */
+.dark .admin-surface .bg-amber-100 {
+    background-color: #451a03;
+}
+
+.dark .admin-surface .text-amber-700 {
+    color: #fcd34d;
+}

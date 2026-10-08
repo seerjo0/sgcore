@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meu Site</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-gallery">
+
+<header class="site-header">
+    <div class="container header-inner">
+        <a href="/" class="brand">
+            <span class="brand-logo" data-cms-slot="site.logo"></span>
+            <span class="brand-name" data-cms-slot="site.name">Meu Site</span>
+        </a>
+        <nav class="main-nav" aria-label="Principal">
+            <ul class="nav-list" data-cms-menu="primary"></ul>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="hero-media" data-cms-slot="home.hero_image"></div>
+        <div class="container hero-content">
+            <p class="slogan" data-cms-slot="site.slogan"></p>
+            <h1 class="hero-title" data-cms-slot="home.hero_title">Portfólio</h1>
+            <p class="hero-subtitle" data-cms-slot="home.hero_subtitle"></p>
+        </div>
+    </section>
+
+    <section class="container section">
+        <div class="gallery" data-cms-slot="home.gallery"></div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container footer-inner">
+        <p class="copyright" data-cms-slot="site.copyright">© Meu Site</p>
+        <ul class="nav-list nav-list--footer" data-cms-menu="footer"></ul>
+    </div>
+</footer>
+
+</body>
+</html>

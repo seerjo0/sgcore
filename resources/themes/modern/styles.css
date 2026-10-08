@@ -1,0 +1,321 @@
+/* Tema Moderno — sgcore */
+
+:root {
+    --cor-fundo: #f7f8fa;
+    --cor-superficie: #ffffff;
+    --cor-texto: #101418;
+    --cor-texto-suave: #5b6570;
+    --cor-primaria: #2563eb;
+    --cor-primaria-escura: #1d4ed8;
+    --cor-borda: #e4e7ec;
+    --fonte: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--cor-fundo);
+    color: var(--cor-texto);
+    font-family: var(--fonte);
+    line-height: 1.65;
+}
+
+a {
+    color: var(--cor-primaria);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--cor-primaria-escura);
+}
+
+.container {
+    width: min(1140px, 92%);
+    margin-inline: auto;
+}
+
+/* Cabeçalho */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 0.85rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--cor-texto);
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: -0.01em;
+}
+
+.brand-logo {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    background-color: var(--cor-primaria);
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+}
+
+.nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.nav-list a {
+    color: var(--cor-texto-suave);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.nav-list a:hover {
+    color: var(--cor-primaria);
+}
+
+/* Hero */
+
+.hero {
+    position: relative;
+    isolation: isolate;
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: #0b1220;
+}
+
+.hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    background-image: linear-gradient(120deg, #0b1220 0%, #16305e 55%, #1d4ed8 100%);
+}
+
+.hero-media:empty {
+    background-image: linear-gradient(120deg, #0b1220 0%, #16305e 55%, #1d4ed8 100%);
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(4, 8, 16, 0.55) 0%, rgba(4, 8, 16, 0.25) 60%, rgba(4, 8, 16, 0.6) 100%);
+}
+
+.hero-content {
+    padding-block: 5rem;
+    color: #fff;
+}
+
+.eyebrow:empty {
+    display: none;
+}
+
+.eyebrow {
+    margin: 0 0 0.75rem;
+    color: #93c5fd;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.hero-title {
+    margin: 0 0 0.75rem;
+    max-width: 18ch;
+    font-size: clamp(2.25rem, 6vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+}
+
+.hero-subtitle:empty {
+    display: none;
+}
+
+.hero-subtitle {
+    margin: 0;
+    max-width: 46rem;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 1.2rem;
+}
+
+/* Seções */
+
+.section {
+    padding-block: 3.5rem;
+}
+
+.gallery:empty {
+    display: none;
+}
+
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.gallery figure {
+    margin: 0;
+    overflow: hidden;
+    background: var(--cor-superficie);
+    border: 1px solid var(--cor-borda);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    transition: transform 0.15s ease;
+}
+
+.gallery figure:hover {
+    transform: translateY(-3px);
+}
+
+.gallery img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+}
+
+.gallery figcaption {
+    padding: 0.65rem 0.9rem;
+    color: var(--cor-texto-suave);
+    font-size: 0.85rem;
+}
+
+/* Página */
+
+.page-article {
+    max-width: 48rem;
+}
+
+.page-title {
+    margin: 0 0 1.5rem;
+    font-size: clamp(1.9rem, 4.5vw, 2.75rem);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+.page-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+.page-body h2,
+.page-body h3 {
+    margin-top: 2.25rem;
+    letter-spacing: -0.01em;
+}
+
+.page-body blockquote {
+    margin: 1.5rem 0;
+    padding: 1rem 1.25rem;
+    border-left: 4px solid var(--cor-primaria);
+    background: var(--cor-superficie);
+    border-radius: 0 10px 10px 0;
+}
+
+/* 404 */
+
+.error-404 {
+    text-align: center;
+    padding-block: 4.5rem;
+}
+
+.error-code {
+    margin: 0;
+    background: linear-gradient(120deg, var(--cor-primaria), #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 6rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.button {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.75rem;
+    background: var(--cor-primaria);
+    color: #fff;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.button:hover {
+    background: var(--cor-primaria-escura);
+    color: #fff;
+}
+
+/* Rodapé */
+
+.site-footer {
+    background: #0b1220;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 1.75rem;
+}
+
+.footer-inner .brand-name {
+    color: #fff;
+    font-weight: 800;
+}
+
+.copyright {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.nav-list--footer a {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.nav-list--footer a:hover {
+    color: #fff;
+}
+
+@media (max-width: 640px) {
+    .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .hero-content {
+        padding-block: 3.5rem;
+    }
+}
