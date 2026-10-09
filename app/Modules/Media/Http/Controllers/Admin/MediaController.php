@@ -69,7 +69,7 @@ class MediaController extends Controller
             return back()->withErrors(['files' => $failures]);
         }
 
-        return back()->with('success', "{$stored} arquivo(s) enviado(s) com sucesso.");
+        return back()->with('success', __('media.uploaded', ['count' => $stored]));
     }
 
     /**
@@ -123,7 +123,7 @@ class MediaController extends Controller
 
         return redirect()
             ->route('admin.midia.index')
-            ->with('success', 'Mídia atualizada com sucesso.');
+            ->with('success', __('media.updated'));
     }
 
     /**
@@ -135,6 +135,6 @@ class MediaController extends Controller
 
         return redirect()
             ->route('admin.midia.index')
-            ->with('success', 'Mídia excluída com sucesso.');
+            ->with('success', __('media.deleted'));
     }
 }

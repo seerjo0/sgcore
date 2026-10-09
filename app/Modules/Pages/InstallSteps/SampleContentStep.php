@@ -25,21 +25,27 @@ class SampleContentStep implements InstallStep
             return;
         }
 
+        $isEnglish = ($context['locale'] ?? 'pt_BR') === 'en';
+
         Page::firstOrCreate(
-            ['slug' => 'sobre'],
+            ['slug' => $isEnglish ? 'about' : 'sobre'],
             [
-                'title' => 'Sobre',
-                'content' => ['body' => '<p>Conte um pouco sobre a sua empresa ou projeto.</p>'],
+                'title' => $isEnglish ? 'About' : 'Sobre',
+                'content' => ['body' => $isEnglish
+                    ? '<p>Tell a little about your company or project.</p>'
+                    : '<p>Conte um pouco sobre a sua empresa ou projeto.</p>'],
                 'status' => 'published',
                 'published_at' => now(),
             ],
         );
 
         Page::firstOrCreate(
-            ['slug' => 'contato'],
+            ['slug' => $isEnglish ? 'contact' : 'contato'],
             [
-                'title' => 'Contato',
-                'content' => ['body' => '<p>Escreva para nós usando o formulário ou o e-mail de contato.</p>'],
+                'title' => $isEnglish ? 'Contact' : 'Contato',
+                'content' => ['body' => $isEnglish
+                    ? '<p>Reach us through the form or the contact e-mail.</p>'
+                    : '<p>Escreva para nós usando o formulário ou o e-mail de contato.</p>'],
                 'status' => 'published',
                 'published_at' => now(),
             ],
@@ -47,13 +53,13 @@ class SampleContentStep implements InstallStep
 
         $menu = Menu::firstOrCreate(
             ['location' => 'primary'],
-            ['title' => 'Principal'],
+            ['title' => $isEnglish ? 'Main' : 'Principal'],
         );
 
         $links = [
-            ['label' => 'Início', 'page' => Page::where('is_home', true)->first() ?? Page::where('slug', 'inicio')->first()],
-            ['label' => 'Sobre', 'page' => Page::where('slug', 'sobre')->first()],
-            ['label' => 'Contato', 'page' => Page::where('slug', 'contato')->first()],
+            ['label' => $isEnglish ? 'Home' : 'Início', 'page' => Page::where('is_home', true)->first() ?? Page::where('slug', $isEnglish ? 'home' : 'inicio')->first()],
+            ['label' => $isEnglish ? 'About' : 'Sobre', 'page' => Page::where('slug', $isEnglish ? 'about' : 'sobre')->first()],
+            ['label' => $isEnglish ? 'Contact' : 'Contato', 'page' => Page::where('slug', $isEnglish ? 'contact' : 'contato')->first()],
         ];
 
         $sort = 0;

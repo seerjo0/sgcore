@@ -65,9 +65,9 @@ class ThemeImporter
             }
 
             if ($source === $temp) {
-                File::moveDirectory($temp, $target);
+                $this->place($temp, $target);
             } else {
-                File::moveDirectory($source, $target);
+                $this->place($source, $target);
                 File::deleteDirectory($temp);
             }
         } catch (\Throwable $exception) {
@@ -78,6 +78,17 @@ class ThemeImporter
 
         return app(ThemeDiscovery::class)->find($slug)
             ?? new Theme($slug, $root.'/'.$slug, $manifest, false, true);
+    }
+
+    /**
+     * Copia $from para $target. Copiar (em vez de renomear/mover) é tolerante
+     * a manipuladores abertos de antivírus no Windows, que tornam o rename
+     * intermitentemente falho.
+     */
+    private function place(string $from, string $target): void
+    {
+        File::copyDirectory($from, $target);
+        File::deleteDirectory($from);
     }
 
     /**

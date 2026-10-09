@@ -1,0 +1,8 @@
+{
+    "name": "Núcleo",
+    "slug": "core",
+    "version": "1.0.0",
+    "description": "Infraestrutura do CMS: configurações, instalação, helpers e o gerenciador de módulos.",
+    "author": "SG Core",
+    "requires": []
+}

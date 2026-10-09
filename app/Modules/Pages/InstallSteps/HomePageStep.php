@@ -23,13 +23,17 @@ class HomePageStep implements InstallStep
             return;
         }
 
-        Page::create([
-            'title' => 'Início',
-            'slug' => 'inicio',
-            'content' => ['body' => '<p>Bem-vindo ao seu novo site.</p>'],
-            'status' => 'published',
-            'is_home' => true,
-            'published_at' => now(),
-        ]);
+        $isEnglish = ($context['locale'] ?? 'pt_BR') === 'en';
+
+        Page::firstOrCreate(
+            ['slug' => $isEnglish ? 'home' : 'inicio'],
+            [
+                'title' => $isEnglish ? 'Home' : 'Início',
+                'content' => ['body' => $isEnglish ? '<p>Welcome to your new site.</p>' : '<p>Bem-vindo ao seu novo site.</p>'],
+                'status' => 'published',
+                'is_home' => true,
+                'published_at' => now(),
+            ],
+        );
     }
 }

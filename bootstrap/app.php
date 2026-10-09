@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureInstallState;
+use App\Modules\Core\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,16 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function (): void {
-            $files = glob(app_path('Modules/*/routes/installer.php')) ?: [];
-            sort($files);
-
-            foreach ($files as $file) {
+            foreach (module_routes_files('installer') as $file) {
                 require $file;
             }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(EnsureInstallState::class);
+        $middleware->web(append: SetLocale::class);
         $middleware->redirectGuestsTo(fn (): string => route('login'));
         $middleware->redirectUsersTo(fn (): string => route('admin.dashboard'));
     })

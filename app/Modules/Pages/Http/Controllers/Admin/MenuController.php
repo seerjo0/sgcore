@@ -50,7 +50,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.edit', $menu)
-            ->with('success', 'Menu criado. Agora adicione os itens.');
+            ->with('success', __('menus.created'));
     }
 
     /**
@@ -83,7 +83,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.edit', $menu)
-            ->with('success', 'Menu atualizado com sucesso.');
+            ->with('success', __('menus.updated'));
     }
 
     /**
@@ -95,7 +95,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.index')
-            ->with('success', 'Menu excluído com sucesso.');
+            ->with('success', __('menus.deleted'));
     }
 
     /**
@@ -117,7 +117,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.edit', $menu)
-            ->with('success', 'Item adicionado ao menu.');
+            ->with('success', __('menus.item_added'));
     }
 
     /**
@@ -154,7 +154,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.edit', $menu)
-            ->with('success', 'Item atualizado.');
+            ->with('success', __('menus.item_updated'));
     }
 
     /**
@@ -198,7 +198,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.edit', $menu)
-            ->with('success', 'Ordem atualizada.');
+            ->with('success', __('menus.order_updated'));
     }
 
     /**
@@ -210,7 +210,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('admin.menus.edit', $menu)
-            ->with('success', 'Item removido.');
+            ->with('success', __('menus.item_removed'));
     }
 
     /**
@@ -226,25 +226,25 @@ class MenuController extends Controller
             'url' => ['nullable', 'string', 'max:500'],
             'parent_id' => ['nullable', 'integer', 'exists:menu_items,id'],
         ], [
-            'label.required' => 'Informe o rótulo do item.',
-            'type.in' => 'Tipo de item inválido.',
-            'page_id.exists' => 'A página selecionada não existe.',
-            'parent_id.exists' => 'O item pai selecionado não existe.',
+            'label.required' => __('menus.err_item_label'),
+            'type.in' => __('menus.err_item_type'),
+            'page_id.exists' => __('menus.err_page_exists'),
+            'parent_id.exists' => __('menus.err_parent_exists'),
         ]);
 
         $validator->after(function (Validator $validator) use ($request, $menu, $item): void {
             $type = (string) $request->input('type');
 
             if ($type === 'page' && ! $request->filled('page_id')) {
-                $validator->errors()->add('page_id', 'Selecione a página do link.');
+                $validator->errors()->add('page_id', __('menus.err_page_required'));
             }
 
             if ($type === 'custom' && ! $request->filled('url')) {
-                $validator->errors()->add('url', 'Informe a URL do link.');
+                $validator->errors()->add('url', __('menus.err_url_required'));
             }
 
             if ($type === 'anchor' && ! str_starts_with((string) $request->input('url'), '#')) {
-                $validator->errors()->add('url', 'Links âncora devem começar com "#".');
+                $validator->errors()->add('url', __('menus.err_anchor_hash'));
             }
 
             if ($request->filled('parent_id')) {
@@ -263,19 +263,19 @@ class MenuController extends Controller
     private function parentError(?MenuItem $parent, Menu $menu, ?MenuItem $item): ?string
     {
         if ($parent === null) {
-            return 'O item pai selecionado não existe.';
+            return __('menus.err_parent_exists');
         }
 
         if ($parent->menu_id !== $menu->id) {
-            return 'O item pai pertence a outro menu.';
+            return __('menus.err_parent_other_menu');
         }
 
         if ($parent->parent_id !== null) {
-            return 'Só é permitido um nível de aninhamento: escolha um item de nível superior.';
+            return __('menus.err_parent_nested');
         }
 
         if ($item !== null && ($parent->is($item) || $this->isDescendant($parent, $item))) {
-            return 'Um item não pode ser filho dele mesmo ou de um descendente.';
+            return __('menus.err_parent_self');
         }
 
         return null;

@@ -1,0 +1,8 @@
+{
+    "name": "Temas",
+    "slug": "themes",
+    "version": "1.0.0",
+    "description": "Engine de temas: renderização do site, slots de conteúdo, importação de ZIP e SEO.",
+    "author": "SG Core",
+    "requires": ["media"]
+}

@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Http\Controllers\Admin;
 
 use App\Modules\Core\Services\AdminPreferences;
+use App\Modules\Core\Services\LocalePreferences;
 use App\Modules\Core\Services\Settings;
 use App\Modules\Media\Models\Medium;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,7 @@ class SettingsController extends Controller
 {
     public function __construct(
         private AdminPreferences $preferences,
+        private LocalePreferences $locales,
         private Settings $settings,
     ) {}
 
@@ -37,6 +39,8 @@ class SettingsController extends Controller
             'seoDescription' => (string) $this->settings->get('seo_description', ''),
             'seoOgImageId' => (string) ($this->settings->get('seo_og_image') ?? ''),
             'seoOgImageUrl' => $this->mediaUrl((string) ($this->settings->get('seo_og_image') ?? '')),
+            'locales' => $this->locales->available(),
+            'currentLocale' => $this->locales->locale(),
         ]);
     }
 
@@ -61,6 +65,7 @@ class SettingsController extends Controller
             'seo_title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'seo_description' => ['sometimes', 'nullable', 'string', 'max:300'],
             'seo_og_image' => ['sometimes', 'nullable', 'integer', 'exists:media,id'],
+            'site_locale' => ['sometimes', 'string', 'in:'.implode(',', array_keys($this->locales->available()))],
             'admin_path' => [
                 'sometimes',
                 'nullable',
@@ -70,9 +75,9 @@ class SettingsController extends Controller
                 'not_in:'.implode(',', AdminPreferences::RESERVED_PATHS),
             ],
         ], [
-            'admin_path.regex' => 'O caminho deve usar apenas letras minúsculas, números e hífens (ex.: backend, painel-01).',
-            'admin_path.not_in' => 'Este caminho conflita com um endereço interno do sistema.',
-            'admin_path.max' => 'O caminho pode ter no máximo 30 caracteres.',
+            'admin_path.regex' => __('settings.error_path_regex'),
+            'admin_path.not_in' => __('settings.error_path_reserved'),
+            'admin_path.max' => __('settings.error_path_max'),
         ]);
 
         $this->settings->set(AdminPreferences::KEY_MODE, $validated['mode'], 'admin');
@@ -85,6 +90,7 @@ class SettingsController extends Controller
             'seo_title' => 'seo',
             'seo_description' => 'seo',
             'seo_og_image' => 'seo',
+            'site_locale' => 'general',
             'admin_path' => 'admin',
         ];
 
@@ -106,6 +112,12 @@ class SettingsController extends Controller
             $this->settings->set($key, $value, $group);
         }
 
+        // Let the current request finish in the language just chosen, so
+        // the success message already speaks the new locale on the redirect.
+        if (array_key_exists('site_locale', $validated)) {
+            app()->setLocale($validated['site_locale']);
+        }
+
         // Changing admin_path moves the routes on the next boot, so the
         // redirect must already point at the new (or restored) address —
         // the old URL would 404 right after the save.
@@ -115,12 +127,12 @@ class SettingsController extends Controller
                 : $validated['admin_path'];
 
             return redirect('/'.$path.'/configuracoes')
-                ->with('success', 'Configurações atualizadas.');
+                ->with('success', __('settings.updated'));
         }
 
         return redirect()
             ->route('admin.configuracoes.index')
-            ->with('success', 'Configurações atualizadas.');
+            ->with('success', __('settings.updated'));
     }
 
     /**

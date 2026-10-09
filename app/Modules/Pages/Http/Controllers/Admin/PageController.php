@@ -82,7 +82,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('admin.paginas.index')
-            ->with('success', 'Página criada com sucesso.');
+            ->with('success', __('pages.created'));
     }
 
     /**
@@ -127,7 +127,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('admin.paginas.index')
-            ->with('success', 'Página atualizada com sucesso.');
+            ->with('success', __('pages.updated'));
     }
 
     /**
@@ -139,7 +139,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('admin.paginas.index')
-            ->with('success', 'Página excluída com sucesso.');
+            ->with('success', __('pages.deleted'));
     }
 
     /**

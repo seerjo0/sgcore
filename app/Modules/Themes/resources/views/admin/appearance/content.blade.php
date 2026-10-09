@@ -1,6 +1,6 @@
 @extends('core::admin.layout')
 
-@section('title', $page ? 'Conteúdo — '.$page->title : 'Conteúdo do tema')
+@section('title', $page ? __('themes.page_title', ['title' => $page->title]) : __('themes.content_title'))
 
 @section('content')
     @php
@@ -12,19 +12,19 @@
 
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h2 class="text-xl font-semibold">Conteúdo do tema</h2>
+            <h2 class="text-xl font-semibold">{{ __('themes.content_title') }}</h2>
             <p class="text-sm text-slate-500">
-                Tema ativo: <span class="font-medium text-slate-700">{{ $theme->name() }}</span>
+                {{ __('themes.active_theme') }}: <span class="font-medium text-slate-700">{{ $theme->name() }}</span>
                 @if ($page)
-                    · Página: <span class="font-medium text-slate-700">{{ $page->title }}</span>
+                    · {{ __('themes.page_label') }}: <span class="font-medium text-slate-700">{{ $page->title }}</span>
                 @endif
             </p>
         </div>
         <div class="flex gap-3 text-sm">
             @if ($page)
-                <a href="{{ route('admin.aparencia.conteudo') }}" class="text-slate-500 hover:text-slate-700">Conteúdo global</a>
+                <a href="{{ route('admin.aparencia.conteudo') }}" class="text-slate-500 hover:text-slate-700">{{ __('themes.content_global') }}</a>
             @endif
-            <a href="{{ route('admin.aparencia.index') }}" class="text-slate-500 hover:text-slate-700">Voltar para Aparência</a>
+            <a href="{{ route('admin.aparencia.index') }}" class="text-slate-500 hover:text-slate-700">{{ __('themes.back_appearance') }}</a>
         </div>
     </div>
 
@@ -32,16 +32,14 @@
         @csrf
 
         <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 class="text-base font-semibold text-slate-800">{{ $page ? 'Slots da página' : 'Slots globais' }}</h3>
+            <h3 class="text-base font-semibold text-slate-800">{{ $page ? __('themes.slots_page') : __('themes.slots_global') }}</h3>
             <p class="mt-1 text-sm text-slate-500">
-                {{ $page
-                    ? 'Conteúdo específico desta página nos elementos do tema.'
-                    : 'Conteúdo compartilhado por todas as páginas (cabeçalho, rodapé, identidade).' }}
+                {{ $page ? __('themes.slots_page_help') : __('themes.slots_global_help') }}
             </p>
 
             @if ($slots === [])
                 <p class="mt-5 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                    Este tema não declara slots editáveis neste escopo.
+                    {{ __('themes.slots_none') }}
                 </p>
             @endif
 
@@ -55,9 +53,9 @@
                 <div class="mt-5 border-t border-slate-100 pt-5 first:mt-4 first:border-t-0 first:pt-0">
                     <label class="mb-1 block text-sm font-medium text-slate-700">{{ $label }}</label>
                     <p class="mb-2 text-xs text-slate-400">
-                        Slot: <code>{{ $id }}</code> · tipo: {{ $type }}
+                        {{ __('themes.slot_type', ['id' => $id, 'type' => $type]) }}
                         @if (! empty($spec['template']))
-                            · template: {{ $spec['template'] }}
+                            · {{ __('themes.slot_template', ['template' => $spec['template']]) }}
                         @endif
                     </p>
 
@@ -66,8 +64,8 @@
                             <textarea name="slots[{{ $id }}]" rows="8"
                                       class="w-full rounded border-slate-300 font-mono text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">{{ $current }}</textarea>
                             <p class="mt-1 text-xs text-slate-400">
-                                Tags permitidas: p, br, strong, em, a, img, ul, ol, li, h2–h4, blockquote, hr, code, pre.
-                                Scripts e estilos são removidos ao salvar.
+                                {{ __('themes.richtext_tags') }}<br>
+                                {{ __('themes.richtext_note') }}
                             </p>
                         @break
 
@@ -83,23 +81,23 @@
                                      class="h-16 w-16 rounded border border-slate-200 object-cover {{ $previewUrl !== '' ? '' : 'hidden' }}">
                                 <button type="button" onclick="pickSlotImage('slots[{{ $id }}]', '{{ $previewId }}')"
                                         class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
-                                    Escolher da biblioteca
+                                    {{ __('themes.choose_library') }}
                                 </button>
                                 <button type="button" onclick="clearSlotImage('slots[{{ $id }}]', '{{ $previewId }}')"
-                                        class="text-sm text-slate-500 hover:text-red-600">Remover</button>
+                                        class="text-sm text-slate-500 hover:text-red-600">{{ __('themes.remove') }}</button>
                             </div>
                         @break
 
                         @case('gallery')
                             <select name="slots[{{ $id }}]"
                                     class="w-full rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                                <option value="">— Nenhuma —</option>
+                                <option value="">— {{ __('themes.gallery_none') }} —</option>
                                 @foreach ($galleries as $gallery)
                                     <option value="{{ $gallery->id }}"
                                             @selected((string) $current === (string) $gallery->id)>{{ $gallery->title }}</option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-slate-400">As imagens e legendas vêm de Galerias.</p>
+                            <p class="mt-1 text-xs text-slate-400">{{ __('themes.gallery_help') }}</p>
                         @break
 
                         @default
@@ -117,11 +115,11 @@
             <div class="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">
                 <button type="submit"
                         class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
-                    {{ $page ? 'Salvar conteúdo da página' : 'Salvar conteúdo global' }}
+                    {{ $page ? __('themes.save_page') : __('themes.save_global') }}
                 </button>
                 @if ($page)
                     <a href="{{ route('admin.aparencia.conteudo') }}"
-                       class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</a>
+                       class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">{{ __('common.cancel') }}</a>
                 @endif
             </div>
         </div>
@@ -129,10 +127,8 @@
 
     @if ($page === null)
         <div class="mt-6 max-w-3xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 class="text-base font-semibold text-slate-800">Conteúdo por página</h3>
-            <p class="mt-1 text-sm text-slate-500">
-                Slots com escopo de página (hero, conteúdo, galeria) são editados em cada página.
-            </p>
+            <h3 class="text-base font-semibold text-slate-800">{{ __('themes.per_page_heading') }}</h3>
+            <p class="mt-1 text-sm text-slate-500">{{ __('themes.per_page_help') }}</p>
 
             <ul class="mt-4 divide-y divide-slate-100">
                 @forelse ($pages as $item)
@@ -140,17 +136,17 @@
                         <span class="text-sm">
                             {{ $item->title }}
                             @if ($item->is_home)
-                                <span class="ml-1 rounded bg-primary-100 px-1.5 py-0.5 text-xs font-semibold text-primary-700">Início</span>
+                                <span class="ml-1 rounded bg-primary-100 px-1.5 py-0.5 text-xs font-semibold text-primary-700">{{ __('pages.home_badge') }}</span>
                             @endif
                             @if (! $item->isPublished())
-                                <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">Rascunho</span>
+                                <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{{ __('pages.draft') }}</span>
                             @endif
                         </span>
                         <a href="{{ route('admin.aparencia.conteudo.pagina', $item) }}"
-                           class="text-sm text-primary-600 hover:text-primary-500">Editar slots</a>
+                           class="text-sm text-primary-600 hover:text-primary-500">{{ __('themes.edit_slots') }}</a>
                     </li>
                 @empty
-                    <li class="py-2 text-sm text-slate-400">Nenhuma página cadastrada ainda.</li>
+                    <li class="py-2 text-sm text-slate-400">{{ __('themes.per_page_empty') }}</li>
                 @endforelse
             </ul>
         </div>
@@ -159,7 +155,7 @@
     @include('media::picker', [
         'mode' => 'single',
         'targetField' => '',
-        'title' => 'Escolher imagem do slot',
+        'title' => __('themes.pick_slot_image'),
     ])
 
     <script>

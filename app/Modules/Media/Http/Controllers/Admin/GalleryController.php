@@ -42,7 +42,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)
-            ->with('success', 'Galeria criada. Agora adicione as imagens.');
+            ->with('success', __('galleries.created'));
     }
 
     /**
@@ -68,7 +68,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)
-            ->with('success', 'Galeria atualizada com sucesso.');
+            ->with('success', __('galleries.updated'));
     }
 
     /**
@@ -80,7 +80,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.index')
-            ->with('success', 'Galeria excluída com sucesso.');
+            ->with('success', __('galleries.deleted'));
     }
 
     /**
@@ -104,7 +104,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)
-            ->with('success', 'Imagem(ns) adicionada(s) à galeria.');
+            ->with('success', __('galleries.image_added'));
     }
 
     /**
@@ -120,7 +120,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)
-            ->with('success', 'Legenda salva.');
+            ->with('success', __('galleries.caption_saved'));
     }
 
     /**
@@ -164,7 +164,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)
-            ->with('success', 'Ordem atualizada.');
+            ->with('success', __('galleries.order_updated'));
     }
 
     /**
@@ -176,6 +176,6 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)
-            ->with('success', 'Imagem removida da galeria.');
+            ->with('success', __('galleries.image_removed'));
     }
 }

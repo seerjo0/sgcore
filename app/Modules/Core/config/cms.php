@@ -62,6 +62,42 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Site languages (Configurações > Idioma)
+    |--------------------------------------------------------------------------
+    |
+    | Locales offered in the admin settings. Native names are shown as-is
+    | (they are the fallback for a user who does not read the current UI
+    | language). The stored `site_locale` setting wins over APP_LOCALE.
+    |
+    */
+
+    'locales' => [
+        'pt_BR' => 'Português (Brasil)',
+        'en' => 'English',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Module manager (admin Módulos)
+    |--------------------------------------------------------------------------
+    |
+    | `state_file` is a JSON file listing which modules are inactive and which
+    | uploads are installed. The loader (ModuleLoaderProvider, routes and
+    | migrations) reads it at bootstrap without touching the database — the
+    | same file-based philosophy as the installer lock. `protected` slugs can
+    | never be deactivated (Core/Auth/Installer keep the CMS bootable).
+    |
+    */
+
+    'modules' => [
+        'state_file' => env('CMS_MODULES_STATE_FILE', storage_path('app/modules.php')),
+        'storage_path' => env('CMS_MODULES_STORAGE_PATH', storage_path('app/modules')),
+        'max_upload_bytes' => env('CMS_MODULES_MAX_UPLOAD_BYTES', 5 * 1024 * 1024),
+        'protected' => ['core', 'installer', 'auth'],
+    ],
+
     'admin' => [
         'default_mode' => 'claro',
         'default_color' => 'azul',

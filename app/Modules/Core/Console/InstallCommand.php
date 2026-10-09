@@ -22,7 +22,8 @@ class InstallCommand extends Command
         {--admin-name= : Nome do administrador}
         {--admin-email= : E-mail do administrador}
         {--admin-password= : Senha do administrador}
-        {--sample : Criar conteúdo de exemplo (páginas e menu)}';
+        {--sample : Criar conteúdo de exemplo (páginas e menu)}
+        {--lang= : Idioma do site (pt_BR ou en)}';
 
     protected $description = 'Instala o sgcore: banco, migrations, admin e lock (equivalente CLI do assistente web)';
 
@@ -54,9 +55,13 @@ class InstallCommand extends Command
             return self::FAILURE;
         }
 
+        $locale = $this->resolveLocale();
+
         try {
             $env->write([
                 'APP_NAME' => 'sgcore',
+                'APP_LOCALE' => $locale,
+                'APP_FALLBACK_LOCALE' => $locale,
                 'DB_CONNECTION' => 'mysql',
                 'DB_HOST' => $credentials['host'],
                 'DB_PORT' => (string) $credentials['port'],
@@ -72,6 +77,7 @@ class InstallCommand extends Command
 
         $context = [
             'site_name' => $this->optionOrPrompt('site-name', 'Nome do site', 'Meu Site'),
+            'locale' => $locale,
             'admin' => [
                 'name' => $this->optionOrPrompt('admin-name', 'Nome do administrador', 'Administrador'),
                 'email' => $this->optionOrPrompt('admin-email', 'E-mail do administrador', 'admin@example.com'),
@@ -130,6 +136,24 @@ class InstallCommand extends Command
             'username' => (string) $username,
             'password' => (string) $password,
         ];
+    }
+
+    /**
+     * Normalize the --lang option into a supported locale code.
+     */
+    private function resolveLocale(): string
+    {
+        $value = strtolower((string) $this->option('lang'));
+
+        if (str_starts_with($value, 'pt')) {
+            return 'pt_BR';
+        }
+
+        if (str_starts_with($value, 'en')) {
+            return 'en';
+        }
+
+        return config('app.locale', 'pt_BR');
     }
 
     private function optionOrPrompt(string $option, string $label, ?string $default, bool $secret = false): string

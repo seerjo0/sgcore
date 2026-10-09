@@ -3,16 +3,11 @@
 use Illuminate\Support\Facades\Route;
 
 /**
- * Resolve route files contributed by modules for the given group.
+ * Resolve route files contributed by active modules for the given group.
  *
  * @return array<int, string>
  */
-$moduleRoutes = function (string $group): array {
-    $files = glob(app_path("Modules/*/routes/{$group}.php")) ?: [];
-    sort($files);
-
-    return $files;
-};
+$moduleRoutes = static fn (string $group): array => module_routes_files($group);
 
 /*
 |--------------------------------------------------------------------------

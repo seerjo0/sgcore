@@ -1,18 +1,27 @@
 @php
     $mode = $mode ?? 'multi';
+    $pickerStrings = [
+        'loading' => __('media.loading'),
+        'empty' => __('media.no_results'),
+        'error' => __('media.load_error'),
+        'none_selected' => __('media.none_selected'),
+        'one_selected' => __('media.one_selected'),
+        'many_selected' => __('media.many_selected'),
+        'close' => __('common.close'),
+    ];
 @endphp
 
 <div id="media-picker" data-mode="{{ $mode }}" data-target="{{ $targetField ?? '' }}" data-preview="{{ $targetPreview ?? '' }}"
      class="fixed inset-0 z-50 hidden bg-black/60 p-4" onclick="if (event.target === this) closeMediaPicker()">
     <div class="mx-auto flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl">
         <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-            <h3 class="font-semibold">{{ $title ?? 'Escolher mídia' }}</h3>
+            <h3 class="font-semibold">{{ $title ?? __('media.choose_default') }}</h3>
             <button type="button" onclick="closeMediaPicker()"
-                    class="rounded px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Fechar">✕</button>
+                    class="rounded px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="{{ __('common.close') }}">✕</button>
         </div>
 
         <div class="border-b border-slate-100 px-5 py-3">
-            <input type="search" id="media-picker-search" placeholder="Buscar na biblioteca…"
+            <input type="search" id="media-picker-search" placeholder="{{ __('media.picker_search') }}"
                    oninput="debouncedMediaPickerSearch()"
                    class="w-full rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
         </div>
@@ -22,38 +31,38 @@
                 @csrf
 
                 <div id="media-picker-results" class="grid grid-cols-3 gap-3 overflow-y-auto p-5 md:grid-cols-4">
-                    <p class="col-span-full text-sm text-slate-400">Carregando…</p>
+                    <p class="col-span-full text-sm text-slate-400">{{ __('media.loading') }}</p>
                 </div>
 
                 <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3">
-                    <span id="media-picker-count" class="text-sm text-slate-500">Nenhuma selecionada</span>
+                    <span id="media-picker-count" class="text-sm text-slate-500">{{ __('media.none_selected') }}</span>
                     <div class="flex gap-2">
                         <button type="button" onclick="closeMediaPicker()"
                                 class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">
-                            Cancelar
+                            {{ __('common.cancel') }}
                         </button>
                         <button type="submit"
                                 class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
-                            Adicionar selecionadas
+                            {{ __('media.add_selected') }}
                         </button>
                     </div>
                 </div>
             </form>
         @else
             <div id="media-picker-results" class="grid grid-cols-3 gap-3 overflow-y-auto p-5 md:grid-cols-4">
-                <p class="col-span-full text-sm text-slate-400">Carregando…</p>
+                <p class="col-span-full text-sm text-slate-400">{{ __('media.loading') }}</p>
             </div>
 
             <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3">
-                <span id="media-picker-count" class="text-sm text-slate-500">Nenhuma selecionada</span>
+                <span id="media-picker-count" class="text-sm text-slate-500">{{ __('media.none_selected') }}</span>
                 <div class="flex gap-2">
                     <button type="button" onclick="closeMediaPicker()"
                             class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">
-                        Cancelar
+                        {{ __('common.cancel') }}
                     </button>
                     <button type="button" onclick="usePickerSelection()"
                             class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
-                        Usar selecionada
+                        {{ __('media.use_selected') }}
                     </button>
                 </div>
             </div>
@@ -63,6 +72,7 @@
 
 <script>
     let mediaPickerTimer = null;
+    const pickerStrings = @json($pickerStrings);
 
     function mediaPickerMode() {
         return document.getElementById('media-picker').dataset.mode;
@@ -90,7 +100,7 @@
 
     async function loadMediaPickerResults(query) {
         const container = document.getElementById('media-picker-results');
-        container.innerHTML = '<p class="col-span-full text-sm text-slate-400">Carregando…</p>';
+        container.innerHTML = '<p class="col-span-full text-sm text-slate-400">' + pickerStrings.loading + '</p>';
 
         try {
             const url = '{{ route('admin.midia.buscar') }}?per_page=12&q=' + encodeURIComponent(query);
@@ -101,7 +111,7 @@
             const current = mode === 'single' ? (document.querySelector(target)?.value ?? '') : '';
 
             if (!payload.data.length) {
-                container.innerHTML = '<p class="col-span-full text-sm text-slate-400">Nenhuma imagem encontrada.</p>';
+                container.innerHTML = '<p class="col-span-full text-sm text-slate-400">' + pickerStrings.empty + '</p>';
                 return;
             }
 
@@ -119,7 +129,7 @@
                     '</label>';
             }).join('');
         } catch (error) {
-            container.innerHTML = '<p class="col-span-full text-sm text-red-600">Erro ao carregar as imagens.</p>';
+            container.innerHTML = '<p class="col-span-full text-sm text-red-600">' + pickerStrings.error + '</p>';
         }
     }
 
@@ -159,7 +169,9 @@
         const total = document.querySelectorAll(selector).length;
 
         document.getElementById('media-picker-count').textContent =
-            total === 0 ? 'Nenhuma selecionada' : (total === 1 ? '1 selecionada' : total + ' selecionadas');
+            total === 0 ? pickerStrings.none_selected
+                : (total === 1 ? pickerStrings.one_selected
+                    : pickerStrings.many_selected.replace(':count', total));
     }
 
     function escapeHtml(value) {

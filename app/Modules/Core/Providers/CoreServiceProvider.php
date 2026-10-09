@@ -12,6 +12,10 @@ use App\Modules\Core\Services\EnvironmentWriter;
 use App\Modules\Core\Services\InstallerLock;
 use App\Modules\Core\Services\InstallerService;
 use App\Modules\Core\Services\InstallStepRegistry;
+use App\Modules\Core\Services\ModuleDiscovery;
+use App\Modules\Core\Services\ModuleImporter;
+use App\Modules\Core\Services\ModuleManifest;
+use App\Modules\Core\Services\ModuleState;
 use App\Modules\Core\Services\Settings;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -31,6 +35,10 @@ class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(EnvironmentWriter::class);
         $this->app->singleton(DatabaseSetup::class);
         $this->app->singleton(InstallerService::class);
+        $this->app->singleton(ModuleManifest::class);
+        $this->app->singleton(ModuleState::class);
+        $this->app->singleton(ModuleDiscovery::class);
+        $this->app->singleton(ModuleImporter::class);
 
         $this->app->tag(DefaultSettingsStep::class, 'cms.install_steps');
     }
@@ -44,6 +52,7 @@ class CoreServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'core');
 
         Gate::define('manage-settings', fn (User $user): bool => $user->role === Role::Admin);
+        Gate::define('manage-modules', fn (User $user): bool => $user->role === Role::Admin);
 
         $this->commands([
             InstallCommand::class,

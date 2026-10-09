@@ -1,0 +1,8 @@
+{
+    "name": "Mídia",
+    "slug": "media",
+    "version": "1.0.0",
+    "description": "Biblioteca de mídia, upload com redimensionamento e galerias ordenáveis.",
+    "author": "SG Core",
+    "requires": []
+}

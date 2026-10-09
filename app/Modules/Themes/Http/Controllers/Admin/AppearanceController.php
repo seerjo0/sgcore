@@ -48,7 +48,7 @@ class AppearanceController extends Controller
             return back()->withErrors(['file' => $exception->getMessage()]);
         }
 
-        return back()->with('success', "Tema \"{$theme->name()}\" importado com sucesso.");
+        return back()->with('success', __('themes.imported_success', ['name' => $theme->name()]));
     }
 
     /**
@@ -63,11 +63,11 @@ class AppearanceController extends Controller
         $theme = $this->discovery->find($validated['slug']);
 
         if ($theme === null || ! $theme->valid) {
-            return back()->withErrors(['slug' => 'Tema inválido ou inexistente.']);
+            return back()->withErrors(['slug' => __('themes.activate_invalid')]);
         }
 
         $this->settings->set('active_theme', $theme->slug, 'general');
 
-        return back()->with('success', "Tema \"{$theme->name()}\" ativado.");
+        return back()->with('success', __('themes.activated', ['name' => $theme->name()]));
     }
 }

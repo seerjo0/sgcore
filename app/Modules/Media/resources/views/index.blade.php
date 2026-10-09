@@ -1,25 +1,27 @@
 @extends('core::admin.layout')
 
-@section('title', 'Mídia')
+@section('title', __('nav.media'))
 
 @section('content')
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h2 class="text-xl font-semibold">Biblioteca de mídia</h2>
-            <p class="text-sm text-slate-500">Imagens enviadas para o site.</p>
+            <h2 class="text-xl font-semibold">{{ __('media.index_title') }}</h2>
+            <p class="text-sm text-slate-500">{{ __('media.index_subtitle') }}</p>
         </div>
         <form method="GET" action="{{ route('admin.midia.index') }}" class="flex gap-2">
-            <input type="search" name="q" value="{{ $q }}" placeholder="Buscar por nome, alt ou legenda…"
+            <input type="search" name="q" value="{{ $q }}" placeholder="{{ __('media.search_placeholder') }}"
                    class="w-64 rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
-            <button type="submit" class="rounded border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">Buscar</button>
+            <button type="submit" class="rounded border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">{{ __('pages.search') }}</button>
         </form>
     </div>
 
     <div class="mb-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 class="font-semibold">Enviar imagens</h3>
+        <h3 class="font-semibold">{{ __('media.upload_title') }}</h3>
         <p class="mb-3 text-sm text-slate-500">
-            JPG, PNG, WebP ou GIF · até {{ (int) floor(config('cms.media.max_upload_bytes') / 1048576) }} MB por arquivo ·
-            imagens com mais de {{ config('cms.media.max_dimension') }}px são redimensionadas automaticamente.
+            {{ __('media.upload_help', [
+                'maxMB' => (int) floor(config('cms.media.max_upload_bytes') / 1048576),
+                'maxDim' => config('cms.media.max_dimension'),
+            ]) }}
         </p>
         <form method="POST" action="{{ route('admin.midia.store') }}" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3">
             @csrf
@@ -28,7 +30,7 @@
                    class="text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-500">
             <button type="submit"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
-                Enviar
+                {{ __('media.upload') }}
             </button>
         </form>
         @error('files')
@@ -41,7 +43,7 @@
 
     @if ($media->isEmpty())
         <div class="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
-            Nenhuma imagem encontrada.
+            {{ __('media.empty') }}
         </div>
     @else
         <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -57,12 +59,12 @@
                             {{ $item->width }}×{{ $item->height }} · {{ number_format($item->size / 1024, 0, ',', '.') }} KB
                         </p>
                         <div class="mt-2 flex items-center justify-between text-sm">
-                            <a href="{{ route('admin.midia.edit', $item) }}" class="font-medium text-primary-600 hover:text-primary-500">Editar</a>
+                            <a href="{{ route('admin.midia.edit', $item) }}" class="font-medium text-primary-600 hover:text-primary-500">{{ __('common.edit') }}</a>
                             <form method="POST" action="{{ route('admin.midia.destroy', $item) }}"
-                                  onsubmit="return confirm('Excluir a mídia {{ $item->filename }}?')">
+                                  onsubmit="return confirm('{{ __('media.delete_confirm', ['name' => $item->filename]) }}')">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="font-medium text-red-600 hover:text-red-500">Excluir</button>
+                                <button type="submit" class="font-medium text-red-600 hover:text-red-500">{{ __('common.delete') }}</button>
                             </form>
                         </div>
                     </div>

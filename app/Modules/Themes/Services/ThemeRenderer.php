@@ -53,8 +53,8 @@ class ThemeRenderer
 
         if ($theme === null) {
             return $this->html(
-                '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>sgcore</title></head>'
-                .'<body><p>Nenhum tema válido encontrado. Importe ou ative um tema em Aparência.</p></body></html>',
+                '<!DOCTYPE html><html lang="'.$this->langAttr().'"><head><meta charset="utf-8"><title>sgcore</title></head>'
+                .'<body><p>'.__('site.no_theme').'</p></body></html>',
                 $status === 200 ? 500 : $status,
             );
         }
@@ -63,8 +63,8 @@ class ThemeRenderer
 
         if ($templatePath === null) {
             return $this->html(
-                '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>sgcore</title></head>'
-                .'<body><p>O tema "'.htmlspecialchars($theme->slug, ENT_QUOTES, 'UTF-8').'" não possui templates válidos.</p></body></html>',
+                '<!DOCTYPE html><html lang="'.$this->langAttr().'"><head><meta charset="utf-8"><title>sgcore</title></head>'
+                .'<body><p>'.__('site.theme_no_templates', ['slug' => htmlspecialchars($theme->slug, ENT_QUOTES, 'UTF-8')]).'</p></body></html>',
                 $status === 200 ? 500 : $status,
             );
         }
@@ -72,7 +72,7 @@ class ThemeRenderer
         $raw = file_get_contents($templatePath);
 
         if ($raw === false) {
-            return $this->html('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"></head><body><p>Erro ao ler o template.</p></body></html>', 500);
+            return $this->html('<!DOCTYPE html><html lang="'.$this->langAttr().'"><head><meta charset="utf-8"></head><body><p>'.__('site.template_error').'</p></body></html>', 500);
         }
 
         $doc = $this->loadDocument($raw);
@@ -344,7 +344,7 @@ class ThemeRenderer
         }
 
         if ($base === '' && $template === '404') {
-            $base = 'Página não encontrada';
+            $base = __('site.not_found');
         }
 
         $title = $base !== '' && $base !== $siteName ? $base.' · '.$siteName : $siteName;
@@ -586,6 +586,11 @@ class ThemeRenderer
         }
 
         return $elements;
+    }
+
+    private function langAttr(): string
+    {
+        return str_replace('_', '-', app()->getLocale());
     }
 
     private function html(string $body, int $status): Response

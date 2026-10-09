@@ -1,0 +1,8 @@
+{
+    "name": "Páginas e Menus",
+    "slug": "pages",
+    "version": "1.0.0",
+    "description": "CRUD de páginas e menus com slugs reservados e sanitização de conteúdo.",
+    "author": "SG Core",
+    "requires": ["media"]
+}

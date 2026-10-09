@@ -131,8 +131,8 @@ class ThemeContentController extends Controller
         );
 
         $message = $page === null
-            ? 'Conteúdo global salvo.'
-            : 'Conteúdo da página “'.$page->title.'” salvo.';
+            ? __('themes.content_saved_global')
+            : __('themes.content_saved_page', ['title' => $page->title]);
 
         $redirect = $page === null
             ? redirect()->route('admin.aparencia.conteudo')->with('success', $message)
@@ -329,6 +329,6 @@ class ThemeContentController extends Controller
     {
         return redirect()
             ->route('admin.aparencia.index')
-            ->withErrors(['theme' => 'Nenhum tema ativo. Ative um tema em Aparência.']);
+            ->withErrors(['theme' => __('themes.no_active')]);
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Modules\Core\Services\LocalePreferences;
 use App\Modules\Core\Services\Settings;
 use App\Modules\Media\Models\Medium;
 use App\Modules\Pages\Models\Page;
@@ -65,12 +66,14 @@ class AdminSiteSettingsTest extends TestCase
         $response->assertOk()
             ->assertSee('>Site<', false)
             ->assertSee('>SEO<', false)
+            ->assertSee('>Idioma<', false)
             ->assertSee('name="site_name"', false)
             ->assertSee('name="site_logo"', false)
             ->assertSee('name="site_favicon"', false)
             ->assertSee('name="seo_title"', false)
             ->assertSee('name="seo_description"', false)
             ->assertSee('name="seo_og_image"', false)
+            ->assertSee('name="site_locale"', false)
             ->assertSee('id="media-picker"', false);
     }
 
@@ -164,6 +167,43 @@ class AdminSiteSettingsTest extends TestCase
 
         $this->assertNull($this->settings()->get('site_name'));
         $this->assertSame(config('app.name'), $this->settings()->get('site_name', config('app.name')));
+    }
+
+    public function test_locale_can_be_changed_and_success_flashes_in_it(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.configuracoes.update'), [
+                'mode' => 'claro',
+                'color' => 'azul',
+                'site_locale' => 'en',
+            ])
+            ->assertRedirect(route('admin.configuracoes.index'))
+            ->assertSessionHas('success', 'Settings updated.');
+
+        $this->assertSame('en', $this->settings()->get(LocalePreferences::KEY_LOCALE));
+
+        $this->get(route('admin.configuracoes.index'))
+            ->assertOk()
+            ->assertSee('>Language<', false)
+            ->assertSee('<option value="en" selected', false);
+    }
+
+    public function test_invalid_locale_is_rejected_and_keeps_the_previous_value(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->settings()->set(LocalePreferences::KEY_LOCALE, 'pt_BR', 'general');
+
+        $this->actingAs($admin)
+            ->post(route('admin.configuracoes.update'), [
+                'mode' => 'claro',
+                'color' => 'azul',
+                'site_locale' => 'de',
+            ])
+            ->assertSessionHasErrors('site_locale');
+
+        $this->assertSame('pt_BR', $this->settings()->get(LocalePreferences::KEY_LOCALE));
     }
 
     public function test_favicon_and_seo_defaults_render_on_the_public_site(): void

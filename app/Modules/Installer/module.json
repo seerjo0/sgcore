@@ -1,0 +1,8 @@
+{
+    "name": "Instalador",
+    "slug": "installer",
+    "version": "1.0.0",
+    "description": "Wizard de instalação web e linha de comando (cms:install).",
+    "author": "SG Core",
+    "requires": []
+}

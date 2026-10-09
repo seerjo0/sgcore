@@ -2,9 +2,9 @@
     $childMap = $childMap ?? collect();
     $kids = $childMap[$item->id] ?? collect();
     $badge = match ($item->type) {
-        'page' => 'Página: /'.($item->page?->slug ?? '—'),
-        'anchor' => 'Âncora: '.($item->url ?? ''),
-        default => 'URL: '.($item->url ?? ''),
+        'page' => __('menus.badge_page').': /'.($item->page?->slug ?? '—'),
+        'anchor' => __('menus.badge_anchor').': '.($item->url ?? ''),
+        default => __('menus.badge_url').': '.($item->url ?? ''),
     };
 @endphp
 
@@ -21,25 +21,25 @@
                 <form method="POST" action="{{ route('admin.menus.itens.mover', [$menu, $item]) }}">
                     @csrf
                     <input type="hidden" name="direcao" value="up">
-                    <button type="submit" title="Mover para cima"
+                    <button type="submit" title="{{ __('menus.move_up') }}"
                             class="rounded border border-slate-200 px-2 py-1 text-xs hover:bg-slate-50">↑</button>
                 </form>
                 <form method="POST" action="{{ route('admin.menus.itens.mover', [$menu, $item]) }}">
                     @csrf
                     <input type="hidden" name="direcao" value="down">
-                    <button type="submit" title="Mover para baixo"
+                    <button type="submit" title="{{ __('menus.move_down') }}"
                             class="rounded border border-slate-200 px-2 py-1 text-xs hover:bg-slate-50">↓</button>
                 </form>
             </div>
 
             <a href="{{ route('admin.menus.itens.edit', [$menu, $item]) }}"
-               class="font-medium text-primary-600 hover:text-primary-500">Editar</a>
+               class="font-medium text-primary-600 hover:text-primary-500">{{ __('common.edit') }}</a>
 
             <form method="POST" action="{{ route('admin.menus.itens.destroy', [$menu, $item]) }}"
-                  onsubmit="return confirm('Remover o item {{ $item->label }} e seus subitens?')">
+                  onsubmit="return confirm('{{ __('menus.item_delete_confirm', ['label' => $item->label]) }}')">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="font-medium text-red-600 hover:text-red-500">Excluir</button>
+                <button type="submit" class="font-medium text-red-600 hover:text-red-500">{{ __('common.delete') }}</button>
             </form>
         </div>
     </div>

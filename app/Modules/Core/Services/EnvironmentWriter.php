@@ -15,6 +15,8 @@ class EnvironmentWriter
     private const MANAGED_KEYS = [
         'APP_NAME',
         'APP_KEY',
+        'APP_LOCALE',
+        'APP_FALLBACK_LOCALE',
         'DB_CONNECTION',
         'DB_HOST',
         'DB_PORT',

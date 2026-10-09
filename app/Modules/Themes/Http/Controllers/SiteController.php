@@ -2,6 +2,7 @@
 
 namespace App\Modules\Themes\Http\Controllers;
 
+use App\Modules\PageBuilder\Services\Renderer as BuilderRenderer;
 use App\Modules\Pages\Models\Page;
 use App\Modules\Themes\Services\ThemeRenderer;
 use Illuminate\Http\Request;
@@ -10,10 +11,14 @@ use Illuminate\Routing\Controller;
 
 class SiteController extends Controller
 {
-    public function __construct(private ThemeRenderer $renderer) {}
+    public function __construct(
+        private ThemeRenderer $renderer,
+        private BuilderRenderer $builder,
+    ) {}
 
     /**
-     * GET / — home page of the active theme.
+     * GET / — home page of the active theme (or the builder layout, when the
+     * home page has published builder output).
      */
     public function home(): Response
     {
@@ -21,6 +26,14 @@ class SiteController extends Controller
             ->where('is_home', true)
             ->where('status', 'published')
             ->first();
+
+        if ($page !== null) {
+            $built = $this->builder->render($page);
+
+            if ($built !== null) {
+                return $this->htmlResponse($built);
+            }
+        }
 
         return $this->renderer->render($page, 'home');
     }
@@ -59,6 +72,12 @@ class SiteController extends Controller
             ->first();
 
         if ($page !== null) {
+            $built = $this->builder->render($page);
+
+            if ($built !== null) {
+                return $this->htmlResponse($built);
+            }
+
             return $this->renderer->render($page, 'page');
         }
 
@@ -68,5 +87,10 @@ class SiteController extends Controller
     private function notFound(): Response
     {
         return $this->renderer->render(null, '404', 404);
+    }
+
+    private function htmlResponse(string $body): Response
+    {
+        return new Response($body, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
     }
 }

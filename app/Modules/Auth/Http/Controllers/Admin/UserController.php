@@ -47,7 +47,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('admin.usuarios.index')
-            ->with('success', 'Usuário criado com sucesso.');
+            ->with('success', __('users.created'));
     }
 
     /**
@@ -93,7 +93,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('admin.usuarios.index')
-            ->with('success', 'Usuário atualizado com sucesso.');
+            ->with('success', __('users.updated'));
     }
 
     /**
@@ -103,7 +103,7 @@ class UserController extends Controller
     {
         if ($user->is($request->user())) {
             return back()->withErrors([
-                'user' => 'Você não pode excluir a própria conta.',
+                'user' => __('users.delete_self'),
             ]);
         }
 
@@ -111,6 +111,6 @@ class UserController extends Controller
 
         return redirect()
             ->route('admin.usuarios.index')
-            ->with('success', 'Usuário excluído com sucesso.');
+            ->with('success', __('users.deleted'));
     }
 }

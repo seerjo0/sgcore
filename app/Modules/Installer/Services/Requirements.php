@@ -14,17 +14,51 @@ class Requirements
     public function evaluate(): array
     {
         $checks = [
-            $this->check('PHP 8.3 ou superior', version_compare(PHP_VERSION, '8.3.0', '>='), 'Versão atual: '.PHP_VERSION),
-            $this->check('Extensão pdo_mysql', extension_loaded('pdo_mysql')),
-            $this->check('Extensão mbstring', extension_loaded('mbstring')),
-            $this->check('Extensão openssl', extension_loaded('openssl')),
-            $this->check('Extensão cURL', extension_loaded('curl')),
-            $this->check('Extensão dom (XML)', extension_loaded('dom')),
-            $this->check('Extensão fileinfo', extension_loaded('fileinfo')),
-            $this->check('Extensão zip', extension_loaded('zip')),
-            $this->check('Extensão gd (imagens)', extension_loaded('gd')),
-            $this->check('Pasta storage/ gravável', File::isDirectory(storage_path()) && File::isWritable(storage_path())),
-            $this->check('Pasta bootstrap/cache gravável', File::isDirectory(base_path('bootstrap/cache')) && File::isWritable(base_path('bootstrap/cache'))),
+            $this->check(
+                __('installer.req_php'),
+                version_compare(PHP_VERSION, '8.3.0', '>='),
+                __('installer.req_php_version', ['version' => PHP_VERSION])
+            ),
+            $this->check(
+                __('installer.req_pdo_mysql'),
+                extension_loaded('pdo_mysql'),
+            ),
+            $this->check(
+                __('installer.req_mbstring'),
+                extension_loaded('mbstring'),
+            ),
+            $this->check(
+                __('installer.req_openssl'),
+                extension_loaded('openssl'),
+            ),
+            $this->check(
+                __('installer.req_curl'),
+                extension_loaded('curl'),
+            ),
+            $this->check(
+                __('installer.req_dom'),
+                extension_loaded('dom'),
+            ),
+            $this->check(
+                __('installer.req_fileinfo'),
+                extension_loaded('fileinfo'),
+            ),
+            $this->check(
+                __('installer.req_zip'),
+                extension_loaded('zip'),
+            ),
+            $this->check(
+                __('installer.req_gd'),
+                extension_loaded('gd'),
+            ),
+            $this->check(
+                __('installer.req_storage'),
+                File::isDirectory(storage_path()) && File::isWritable(storage_path()),
+            ),
+            $this->check(
+                __('installer.req_bootstrap_cache'),
+                File::isDirectory(base_path('bootstrap/cache')) && File::isWritable(base_path('bootstrap/cache')),
+            ),
         ];
 
         $env = $this->ensureEnvironmentFile();
@@ -48,7 +82,7 @@ class Requirements
 
         if (! File::exists($path)) {
             if (! File::exists($template)) {
-                return $this->check('Arquivo .env', false, 'Template .env.example não encontrado em '.$path);
+                return $this->check(__('installer.req_env'), false, __('installer.req_env_template_missing', ['path' => $path]));
             }
 
             File::copy($template, $path);
@@ -56,13 +90,13 @@ class Requirements
 
         if (! File::exists($path)) {
             return $this->check(
-                'Arquivo .env',
+                __('installer.req_env'),
                 false,
-                'Não foi possível criar o arquivo em '.$path.' — crie manualmente a partir do .env.example.'
+                __('installer.req_env_create_fail', ['path' => $path])
             );
         }
 
-        return $this->check('Arquivo .env', File::isWritable($path), $path);
+        return $this->check(__('installer.req_env'), File::isWritable($path), $path);
     }
 
     /**

@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'seo_description',
     'seo_og_image',
     'published_at',
+    'builder_draft',
+    'builder_published',
 ])]
 class Page extends Model
 {
@@ -38,6 +40,8 @@ class Page extends Model
             'content' => 'array',
             'is_home' => 'boolean',
             'published_at' => 'datetime',
+            'builder_draft' => 'array',
+            'builder_published' => 'array',
         ];
     }
 

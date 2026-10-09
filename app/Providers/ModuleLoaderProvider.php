@@ -2,14 +2,16 @@
 
 namespace App\Providers;
 
+use App\Modules\Core\Services\Module;
+use App\Modules\Core\Services\ModuleState;
 use Illuminate\Support\ServiceProvider;
 
 class ModuleLoaderProvider extends ServiceProvider
 {
     /**
-     * Register every module service provider found under app/Modules.
-     *
-     * @return list<class-string<ServiceProvider>>
+     * Register every module service provider found under app/Modules and the
+     * module storage path, skipping modules explicitly deactivated in the
+     * module manager (cms.modules.state_file).
      */
     public function register(): void
     {
@@ -31,22 +33,57 @@ class ModuleLoaderProvider extends ServiceProvider
      */
     private function discoverModuleProviders(): array
     {
-        $appPath = rtrim(str_replace('\\', '/', app_path()), '/');
-
-        $files = glob($appPath.'/Modules/*/Providers/*ServiceProvider.php') ?: [];
-        sort($files);
-
+        $inactive = $this->inactiveSlugs();
         $providers = [];
 
-        foreach ($files as $file) {
-            $relative = substr($file, strlen($appPath) + 1);
-            $class = 'App\\'.str_replace(['/', '.php'], ['\\', ''], $relative);
+        foreach ($this->moduleBaseDirs() as $base) {
+            $appPath = rtrim(str_replace('\\', '/', $base), '/');
 
-            if (class_exists($class) && is_subclass_of($class, ServiceProvider::class)) {
-                $providers[] = $class;
+            $files = glob($appPath.'/*/Providers/*ServiceProvider.php') ?: [];
+            sort($files);
+
+            foreach ($files as $file) {
+                $slug = Module::slugFrom(basename(dirname(dirname($file))));
+
+                if (in_array($slug, $inactive, true)) {
+                    continue;
+                }
+
+                $relative = substr($file, strlen($appPath) + 1);
+                $class = 'App\\Modules\\'.str_replace(['/', '.php'], ['\\', ''], $relative);
+
+                if (class_exists($class) && is_subclass_of($class, ServiceProvider::class)) {
+                    $providers[] = $class;
+                }
             }
         }
 
         return $providers;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function inactiveSlugs(): array
+    {
+        try {
+            return (new ModuleState)->inactive();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function moduleBaseDirs(): array
+    {
+        return [
+            app_path('Modules'),
+            (string) config(
+                'cms.modules.storage_path',
+                env('CMS_MODULES_STORAGE_PATH', storage_path('app/modules')),
+            ),
+        ];
     }
 }

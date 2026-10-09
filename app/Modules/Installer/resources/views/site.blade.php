@@ -1,11 +1,11 @@
-@extends('installer::layout', ['step' => 3])
+@extends('installer::layout', ['step' => 3, 'lang' => $lang])
 
-@section('title', 'Site e administrador')
-@section('subtitle', 'Últimos dados para concluir')
+@section('title', __('installer.site_page_title'))
+@section('subtitle', __('installer.site_subtitle'))
 
 @section('content')
-    <h1 class="mb-1 text-lg font-semibold text-white">Site e administrador</h1>
-    <p class="mb-4 text-sm text-zinc-400">Estas informações criam o site e o primeiro usuário com acesso total.</p>
+    <h1 class="mb-1 text-lg font-semibold text-white">{{ __('installer.site_heading') }}</h1>
+    <p class="mb-4 text-sm text-zinc-400">{{ __('installer.site_help') }}</p>
 
     @if ($failure)
         <p class="mb-4 rounded-lg border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-300">
@@ -14,8 +14,10 @@
     @endif
 
     <form method="POST" action="{{ route('installer.site.store') }}" class="space-y-4">
+        <input type="hidden" name="lang" value="{{ $lang }}">
+
         <div>
-            <label for="site_name" class="mb-1 block text-sm font-medium text-zinc-300">Nome do site</label>
+            <label for="site_name" class="mb-1 block text-sm font-medium text-zinc-300">{{ __('installer.site_name') }}</label>
             <input type="text" id="site_name" name="site_name" value="{{ old('site_name', $values['site_name'] ?? '') }}" required maxlength="120"
                    class="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
             @if ($errors->has('site_name'))
@@ -24,11 +26,11 @@
         </div>
 
         <div class="border-t border-zinc-800 pt-4">
-            <p class="mb-3 text-sm font-medium text-zinc-300">Usuário administrador</p>
+            <p class="mb-3 text-sm font-medium text-zinc-300">{{ __('installer.admin_heading') }}</p>
 
             <div class="space-y-4">
                 <div>
-                    <label for="admin_name" class="mb-1 block text-sm font-medium text-zinc-300">Nome</label>
+                    <label for="admin_name" class="mb-1 block text-sm font-medium text-zinc-300">{{ __('installer.admin_name') }}</label>
                     <input type="text" id="admin_name" name="admin_name" value="{{ old('admin_name', $values['admin_name'] ?? '') }}" required maxlength="120"
                            class="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
                     @if ($errors->has('admin_name'))
@@ -37,7 +39,7 @@
                 </div>
 
                 <div>
-                    <label for="admin_email" class="mb-1 block text-sm font-medium text-zinc-300">E-mail</label>
+                    <label for="admin_email" class="mb-1 block text-sm font-medium text-zinc-300">{{ __('installer.admin_email') }}</label>
                     <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email', $values['admin_email'] ?? '') }}" required maxlength="190"
                            class="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
                     @if ($errors->has('admin_email'))
@@ -47,7 +49,7 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="admin_password" class="mb-1 block text-sm font-medium text-zinc-300">Senha</label>
+                        <label for="admin_password" class="mb-1 block text-sm font-medium text-zinc-300">{{ __('installer.admin_password') }}</label>
                         <input type="password" id="admin_password" name="admin_password" required minlength="8"
                                class="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
                         @if ($errors->has('admin_password'))
@@ -55,7 +57,7 @@
                         @endif
                     </div>
                     <div>
-                        <label for="admin_password_confirmation" class="mb-1 block text-sm font-medium text-zinc-300">Confirmar senha</label>
+                        <label for="admin_password_confirmation" class="mb-1 block text-sm font-medium text-zinc-300">{{ __('installer.admin_password_confirm') }}</label>
                         <input type="password" id="admin_password_confirmation" name="admin_password_confirmation" required minlength="8"
                                class="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
                     </div>
@@ -64,15 +66,15 @@
         </div>
 
         <div class="border-t border-zinc-800 pt-4">
-            <p class="mb-3 text-sm font-medium text-zinc-300">Conteúdo</p>
+            <p class="mb-3 text-sm font-medium text-zinc-300">{{ __('installer.content_heading') }}</p>
 
             <input type="hidden" name="sample_content" value="0">
             <label class="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-3">
                 <input type="checkbox" name="sample_content" value="1" class="mt-0.5"
                        @checked(($values['sample_content'] ?? old('sample_content')) === '1')>
                 <span class="text-sm text-zinc-300">
-                    <span class="font-medium text-white">Criar conteúdo de exemplo</span><br>
-                    <span class="text-zinc-500">Páginas “Sobre” e “Contato” e um menu principal já com links.</span>
+                    <span class="font-medium text-white">{{ __('installer.sample_content_label') }}</span><br>
+                    <span class="text-zinc-500">{{ __('installer.sample_content_help') }}</span>
                 </span>
             </label>
             @if ($errors->has('sample_content'))
@@ -81,10 +83,10 @@
         </div>
 
         <div class="flex items-center justify-between pt-2">
-            <a href="{{ route('installer.database') }}" class="text-sm text-zinc-400 hover:text-zinc-200">← Voltar</a>
+            <a href="{{ route('installer.database', ['lang' => $lang]) }}" class="text-sm text-zinc-400 hover:text-zinc-200">← {{ __('installer.back') }}</a>
             <button type="submit"
                     class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500">
-                Instalar →
+                {{ __('installer.install_button') }} →
             </button>
         </div>
     </form>

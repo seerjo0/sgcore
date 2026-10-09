@@ -5,6 +5,7 @@ namespace App\Modules\Installer\Http\Controllers;
 use App\Modules\Core\Exceptions\DatabaseSetupException;
 use App\Modules\Core\Services\DatabaseSetup;
 use App\Modules\Core\Services\EnvironmentWriter;
+use App\Modules\Installer\Http\InteractsWithInstallerLocale;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\Support\MessageBag;
 
 class DatabaseController extends Controller
 {
+    use InteractsWithInstallerLocale;
+
     public function __construct(
         private DatabaseSetup $database,
         private EnvironmentWriter $env,
@@ -21,8 +24,11 @@ class DatabaseController extends Controller
 
     public function index(Request $request): View
     {
+        $lang = $this->resolveWizardLocale($request);
+
         return view('installer::database', [
             'step' => 2,
+            'lang' => $lang,
             'values' => [
                 'host' => $request->input('host', config('database.connections.mysql.host', '127.0.0.1')),
                 'port' => $request->input('port', config('database.connections.mysql.port', 3306)),
@@ -36,6 +42,8 @@ class DatabaseController extends Controller
 
     public function store(Request $request): View|RedirectResponse
     {
+        $lang = $this->resolveWizardLocale($request);
+
         $validator = Validator::make($request->all(), [
             'host' => ['required', 'string', 'max:255'],
             'port' => ['required', 'integer', 'min:1', 'max:65535'],
@@ -74,13 +82,14 @@ class DatabaseController extends Controller
             return $this->form($request, new MessageBag, $exception->getMessage());
         }
 
-        return redirect()->route('installer.site');
+        return redirect()->route('installer.site', ['lang' => $lang]);
     }
 
     private function form(Request $request, MessageBag $errors, ?string $failure = null): View
     {
         return view('installer::database', [
             'step' => 2,
+            'lang' => $this->resolveWizardLocale($request),
             'values' => $request->only(['host', 'port', 'database', 'username']),
             'errors' => $errors,
             'failure' => $failure,

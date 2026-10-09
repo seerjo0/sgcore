@@ -1,11 +1,11 @@
 @extends('core::admin.layout')
 
-@section('title', 'Editar menu')
+@section('title', __('menus.edit_title'))
 
 @section('content')
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-xl font-semibold">Editar “{{ $menu->title }}”</h2>
-        <a href="{{ route('admin.menus.index') }}" class="text-sm text-slate-500 hover:text-slate-700">Voltar para a lista</a>
+        <h2 class="text-xl font-semibold">{{ __('menus.edit_quoted', ['title' => $menu->title]) }}</h2>
+        <a href="{{ route('admin.menus.index') }}" class="text-sm text-slate-500 hover:text-slate-700">{{ __('pages.back_to_list') }}</a>
     </div>
 
     <div class="mb-6 max-w-xl rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -14,7 +14,7 @@
             @method('PUT')
 
             <div class="mb-4">
-                <label for="title" class="mb-1 block text-sm font-medium text-slate-700">Título</label>
+                <label for="title" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.title') }}</label>
                 <input type="text" id="title" name="title" required maxlength="120"
                        value="{{ old('title', $menu->title) }}"
                        class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
@@ -22,11 +22,11 @@
             </div>
 
             <div class="mb-4">
-                <label for="location" class="mb-1 block text-sm font-medium text-slate-700">Local</label>
+                <label for="location" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.location') }}</label>
                 <select id="location" name="location" required
                         class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                     @foreach ($locations as $value => $label)
-                        <option value="{{ $value }}" @selected(old('location', $menu->location) === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(old('location', $menu->location) === $value)>{{ __("menus.location_{$value}") }}</option>
                     @endforeach
                 </select>
                 @error('location') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -34,14 +34,14 @@
 
             <button type="submit"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
-                Salvar menu
+                {{ __('menus.edit_menu') }}
             </button>
         </form>
     </div>
 
     <div class="mb-4">
-        <h3 class="font-semibold">Adicionar item</h3>
-        <p class="text-sm text-slate-500">Itens podem ser aninados sob outro item de nível superior (1 nível).</p>
+        <h3 class="font-semibold">{{ __('menus.add_item') }}</h3>
+        <p class="text-sm text-slate-500">{{ __('menus.add_item_help') }}</p>
     </div>
 
     <div class="mb-8 max-w-3xl rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -50,30 +50,30 @@
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="md:col-span-2">
-                    <label for="label" class="mb-1 block text-sm font-medium text-slate-700">Rótulo</label>
+                    <label for="label" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.label') }}</label>
                     <input type="text" id="label" name="label" required maxlength="120"
                            value="{{ old('label') }}"
                            class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                           placeholder="Ex.: Sobre nós">
+                           placeholder="{{ __('menus.label_placeholder') }}">
                     @error('label') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
-                    <label for="type" class="mb-1 block text-sm font-medium text-slate-700">Tipo</label>
+                    <label for="type" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.type') }}</label>
                     <select id="type" name="type" required onchange="toggleItemFields()"
                             class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                        <option value="page" @selected(old('type') === 'page')>Página do site</option>
-                        <option value="custom" @selected(old('type') === 'custom')>URL personalizada</option>
-                        <option value="anchor" @selected(old('type') === 'anchor')>Âncora (#secao)</option>
+                        <option value="page" @selected(old('type') === 'page')>{{ __('menus.type_page') }}</option>
+                        <option value="custom" @selected(old('type') === 'custom')>{{ __('menus.type_custom') }}</option>
+                        <option value="anchor" @selected(old('type') === 'anchor')>{{ __('menus.type_anchor') }}</option>
                     </select>
                     @error('type') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
                 <div id="field_page">
-                    <label for="page_id" class="mb-1 block text-sm font-medium text-slate-700">Página</label>
+                    <label for="page_id" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.page') }}</label>
                     <select id="page_id" name="page_id"
                             class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                        <option value="">— Selecione —</option>
+                        <option value="">{{ __('menus.select') }}</option>
                         @foreach ($pages as $page)
                             <option value="{{ $page->id }}" @selected((int) old('page_id') === $page->id)>{{ $page->title }}</option>
                         @endforeach
@@ -82,19 +82,19 @@
                 </div>
 
                 <div id="field_url">
-                    <label for="url" class="mb-1 block text-sm font-medium text-slate-700">URL</label>
+                    <label for="url" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.url') }}</label>
                     <input type="text" id="url" name="url" maxlength="500"
                            value="{{ old('url') }}"
-                           placeholder="https://… ou /contato ou #secao"
+                           placeholder="{{ __('menus.url_placeholder') }}"
                            class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                     @error('url') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
-                    <label for="parent_id" class="mb-1 block text-sm font-medium text-slate-700">Item pai (opcional)</label>
+                    <label for="parent_id" class="mb-1 block text-sm font-medium text-slate-700">{{ __('menus.parent') }}</label>
                     <select id="parent_id" name="parent_id"
                             class="w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                        <option value="">— Nível superior —</option>
+                        <option value="">{{ __('menus.top_level') }}</option>
                         @foreach ($roots as $root)
                             <option value="{{ $root->id }}" @selected((int) old('parent_id') === $root->id)>{{ $root->label }}</option>
                         @endforeach
@@ -105,16 +105,16 @@
 
             <button type="submit"
                     class="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
-                Adicionar item
+                {{ __('menus.add_item_btn') }}
             </button>
         </form>
     </div>
 
-    <h3 class="mb-3 font-semibold">Itens do menu ({{ $menu->items()->count() }})</h3>
+    <h3 class="mb-3 font-semibold">{{ __('menus.items_heading', ['count' => $menu->items()->count()]) }}</h3>
 
     @if ($roots->isEmpty())
         <div class="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-            Este menu ainda não tem itens.
+            {{ __('menus.items_empty') }}
         </div>
     @else
         <div class="space-y-2">

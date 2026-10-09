@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Console;
 
 use App\Modules\Core\Services\InstallerLock;
+use App\Modules\Core\Services\ModuleState;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -31,6 +32,11 @@ class UninstallCommand extends Command
 
         $this->dropAllTables();
         $lock->forget();
+
+        if ((new ModuleState)->touched()) {
+            (new ModuleState)->forget();
+            $this->components->info('Estado de módulos (storage/app/modules.php) removido.');
+        }
 
         $this->components->info('sgcore desinstalado. O arquivo .env foi mantido.');
 

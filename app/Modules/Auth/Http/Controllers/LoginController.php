@@ -43,8 +43,8 @@ class LoginController extends Controller
         return back()
             ->withErrors([
                 'email' => $inactive
-                    ? 'Esta conta está inativa. Procure um administrador.'
-                    : 'E-mail ou senha inválidos.',
+                    ? __('login.inactive')
+                    : __('auth.failed'),
             ])
             ->onlyInput('email');
     }

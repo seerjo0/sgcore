@@ -8,6 +8,8 @@ use App\Modules\Core\Exceptions\DatabaseSetupException;
 use App\Modules\Core\Services\DatabaseSetup;
 use App\Modules\Core\Services\InstallerLock;
 use App\Modules\Core\Services\Settings;
+use App\Modules\Pages\Models\Menu;
+use App\Modules\Pages\Models\Page;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -58,6 +60,43 @@ class InstallerFlowTest extends TestCase
         $this->assertFileExists($this->envFile);
     }
 
+    public function test_requirements_page_renders_in_english_with_lang_query(): void
+    {
+        $response = $this->get('/instalar?lang=en');
+
+        $response->assertOk();
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('Server requirements');
+        $response->assertSee('Language');
+        $response->assertSee('pdo_mysql extension');
+        $response->assertDontSee('Requisitos do servidor');
+    }
+
+    public function test_full_installation_in_english_persists_locale_and_sample_content(): void
+    {
+        $response = $this->post('/instalar/site', [
+            'lang' => 'en',
+            'site_name' => 'Test Site',
+            'admin_name' => 'John Admin',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'secret123',
+            'admin_password_confirmation' => 'secret123',
+            'sample_content' => '1',
+        ]);
+
+        $response->assertOk();
+        $response->assertSee('Test Site installed!');
+
+        $contents = (string) file_get_contents($this->envFile);
+        $this->assertStringContainsString('APP_LOCALE=en', $contents);
+        $this->assertStringContainsString('APP_FALLBACK_LOCALE=en', $contents);
+
+        $this->assertSame('Home', Page::query()->where('is_home', true)->value('title'));
+        $this->assertSame('About', Page::query()->where('slug', 'about')->value('title'));
+        $this->assertSame('Contact', Page::query()->where('slug', 'contact')->value('title'));
+        $this->assertSame('Main', Menu::query()->where('location', 'primary')->value('title'));
+    }
+
     public function test_uninstalled_site_redirects_to_installer(): void
     {
         $this->get('/')->assertRedirect('/instalar');
@@ -81,7 +120,7 @@ class InstallerFlowTest extends TestCase
             'password' => 'root',
         ]);
 
-        $response->assertRedirect(route('installer.site'));
+        $response->assertRedirect(route('installer.site', ['lang' => 'pt']));
         $this->assertFileExists($this->envFile);
 
         $contents = (string) file_get_contents($this->envFile);

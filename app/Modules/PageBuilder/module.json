@@ -1,0 +1,8 @@
+{
+    "name": "Construtor de Páginas",
+    "slug": "page_builder",
+    "version": "1.0.0",
+    "description": "Editor visual drag-and-drop (GrapesJS + Bootstrap 5) com rascunho e publicação.",
+    "author": "SG Core",
+    "requires": ["pages", "media"]
+}

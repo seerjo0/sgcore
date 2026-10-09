@@ -1,22 +1,22 @@
 @extends('core::admin.layout')
 
-@section('title', 'Configurações')
+@section('title', __('nav.settings'))
 
 @section('content')
     <div class="mb-4">
-        <h2 class="text-xl font-semibold">Configurações</h2>
-        <p class="text-sm text-slate-500">Site, SEO e preferências do painel administrativo.</p>
+        <h2 class="text-xl font-semibold">{{ __('nav.settings') }}</h2>
+        <p class="text-sm text-slate-500">{{ __('settings.subtitle') }}</p>
     </div>
 
     <form method="POST" action="{{ route('admin.configuracoes.update') }}"
           class="max-w-3xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         @csrf
 
-        <h3 class="text-base font-semibold text-slate-800">Admin</h3>
-        <p class="mt-1 text-sm text-slate-500">Modo de exibição e cor do painel administrativo.</p>
+        <h3 class="text-base font-semibold text-slate-800">{{ __('settings.admin') }}</h3>
+        <p class="mt-1 text-sm text-slate-500">{{ __('settings.admin_help') }}</p>
 
         <fieldset class="mt-5">
-            <legend class="text-sm font-medium text-slate-700">Modo</legend>
+            <legend class="text-sm font-medium text-slate-700">{{ __('settings.mode') }}</legend>
             <div class="mt-2 grid gap-3 sm:grid-cols-2">
                 @foreach ($modes as $key => $label)
                     <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-4 hover:border-slate-300 has-[:checked]:border-primary-600 has-[:checked]:ring-1 has-[:checked]:ring-primary-600">
@@ -31,40 +31,40 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
                             </svg>
                         @endif
-                        <span class="text-sm font-medium text-slate-700">{{ $label }}</span>
+                        <span class="text-sm font-medium text-slate-700">{{ __("settings.mode_{$key}") }}</span>
                     </label>
                 @endforeach
             </div>
         </fieldset>
 
         <fieldset class="mt-6">
-            <legend class="text-sm font-medium text-slate-700">Cor do admin</legend>
+            <legend class="text-sm font-medium text-slate-700">{{ __('settings.color') }}</legend>
             <div class="mt-2 grid gap-3 sm:grid-cols-3">
                 @foreach ($colors as $key => $color)
                     <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-4 hover:border-slate-300 has-[:checked]:border-primary-600 has-[:checked]:ring-1 has-[:checked]:ring-primary-600">
                         <input type="radio" name="color" value="{{ $key }}" @checked(old('color', $currentColor) === $key) required
                                class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500">
                         <span class="h-5 w-5 shrink-0 rounded-full border border-black/10" style="background-color: {{ $color['hex'] }}"></span>
-                        <span class="text-sm font-medium text-slate-700">{{ $color['label'] }}</span>
+                        <span class="text-sm font-medium text-slate-700">{{ __("settings.color_{$key}") }}</span>
                     </label>
                 @endforeach
             </div>
         </fieldset>
 
         <fieldset class="mt-6">
-            <legend class="text-sm font-medium text-slate-700">Caminho do admin</legend>
+            <legend class="text-sm font-medium text-slate-700">{{ __('settings.path') }}</legend>
             <div class="mt-2 flex items-center gap-2">
                 <span class="rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">/</span>
-                <input type="text" name="admin_path" maxlength="30" pattern="[a-z0-9\-]+" title="Apenas letras minúsculas, números e hífens"
+                <input type="text" name="admin_path" maxlength="30" pattern="[a-z0-9\-]+" title="{{ __('settings.path_pattern') }}"
                        value="{{ old('admin_path', $adminPath) }}"
                        class="w-56 rounded-r border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
             </div>
             <p class="mt-2 text-xs text-slate-500">
-                Endereço do painel (ex.: <code class="rounded bg-slate-100 px-1">admin</code>,
+                {{ __('settings.path_help_before') }}
+                <code class="rounded bg-slate-100 px-1">admin</code>,
                 <code class="rounded bg-slate-100 px-1">backend</code>,
-                <code class="rounded bg-slate-100 px-1">administrator</code>).
-                Ao salvar, o endereço antigo deixa de funcionar na hora.
-                Deixe em branco para voltar ao padrão.
+                <code class="rounded bg-slate-100 px-1">administrator</code>.
+                {{ __('settings.path_help_after') }}
             </p>
             @error('admin_path')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -73,12 +73,12 @@
 
         <hr class="my-8 border-slate-200">
 
-        <h3 class="text-base font-semibold text-slate-800">Site</h3>
-        <p class="mt-1 text-sm text-slate-500">Identidade do site. Os valores são aplicados como padrão quando o tema não define nada.</p>
+        <h3 class="text-base font-semibold text-slate-800">{{ __('settings.site') }}</h3>
+        <p class="mt-1 text-sm text-slate-500">{{ __('settings.site_help') }}</p>
 
         <div class="mt-5 grid gap-5">
             <div>
-                <label for="site_name" class="block text-sm font-medium text-slate-700">Nome do site</label>
+                <label for="site_name" class="block text-sm font-medium text-slate-700">{{ __('settings.site_name') }}</label>
                 <input type="text" id="site_name" name="site_name" maxlength="100" required
                        value="{{ old('site_name', $siteName) }}"
                        class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
@@ -88,17 +88,17 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Logo</label>
+                <label class="block text-sm font-medium text-slate-700">{{ __('settings.logo') }}</label>
                 <input type="hidden" name="site_logo" value="{{ old('site_logo', $siteLogoId) }}">
                 <div class="mt-1 flex items-center gap-3">
                     <img id="site-logo-preview" src="{{ $siteLogoUrl }}" alt=""
                          class="h-16 w-16 rounded border border-slate-200 object-cover {{ $siteLogoUrl !== '' ? '' : 'hidden' }}">
                     <button type="button" onclick="pickSettingsImage('site_logo', 'site-logo-preview')"
                             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
-                        Escolher da biblioteca
+                        {{ __('settings.choose_library') }}
                     </button>
                     <button type="button" onclick="clearSettingsImage('site_logo', 'site-logo-preview')"
-                            class="text-sm text-slate-500 hover:text-red-600">Remover</button>
+                            class="text-sm text-slate-500 hover:text-red-600">{{ __('settings.remove') }}</button>
                 </div>
                 @error('site_logo')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -106,17 +106,17 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Favicon</label>
+                <label class="block text-sm font-medium text-slate-700">{{ __('settings.favicon') }}</label>
                 <input type="hidden" name="site_favicon" value="{{ old('site_favicon', $faviconId) }}">
                 <div class="mt-1 flex items-center gap-3">
                     <img id="favicon-preview" src="{{ $faviconUrl }}" alt=""
                          class="h-10 w-10 rounded border border-slate-200 object-cover {{ $faviconUrl !== '' ? '' : 'hidden' }}">
                     <button type="button" onclick="pickSettingsImage('site_favicon', 'favicon-preview')"
                             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
-                        Escolher da biblioteca
+                        {{ __('settings.choose_library') }}
                     </button>
                     <button type="button" onclick="clearSettingsImage('site_favicon', 'favicon-preview')"
-                            class="text-sm text-slate-500 hover:text-red-600">Remover</button>
+                            class="text-sm text-slate-500 hover:text-red-600">{{ __('settings.remove') }}</button>
                 </div>
                 @error('site_favicon')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -126,12 +126,29 @@
 
         <hr class="my-8 border-slate-200">
 
-        <h3 class="text-base font-semibold text-slate-800">SEO</h3>
-        <p class="mt-1 text-sm text-slate-500">Título e descrição padrão usados quando a página não define os seus.</p>
+        <h3 class="text-base font-semibold text-slate-800">{{ __('settings.locale') }}</h3>
+        <p class="mt-1 text-sm text-slate-500">{{ __('settings.locale_help') }}</p>
+
+        <div class="mt-5">
+            <select name="site_locale"
+                    class="w-64 rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                @foreach ($locales as $code => $label)
+                    <option value="{{ $code }}" @selected(old('locale', $currentLocale) === $code)>{{ $label }}</option>
+                @endforeach
+            </select>
+            @error('locale')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <hr class="my-8 border-slate-200">
+
+        <h3 class="text-base font-semibold text-slate-800">{{ __('settings.seo') }}</h3>
+        <p class="mt-1 text-sm text-slate-500">{{ __('settings.seo_help') }}</p>
 
         <div class="mt-5 grid gap-5">
             <div>
-                <label for="seo_title" class="block text-sm font-medium text-slate-700">Título padrão (SEO)</label>
+                <label for="seo_title" class="block text-sm font-medium text-slate-700">{{ __('settings.seo_title') }}</label>
                 <input type="text" id="seo_title" name="seo_title" maxlength="255"
                        value="{{ old('seo_title', $seoTitle) }}"
                        class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
@@ -141,7 +158,7 @@
             </div>
 
             <div>
-                <label for="seo_description" class="block text-sm font-medium text-slate-700">Descrição padrão (SEO)</label>
+                <label for="seo_description" class="block text-sm font-medium text-slate-700">{{ __('settings.seo_description') }}</label>
                 <textarea id="seo_description" name="seo_description" rows="3" maxlength="300"
                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">{{ old('seo_description', $seoDescription) }}</textarea>
                 @error('seo_description')
@@ -150,17 +167,17 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Imagem padrão (Open Graph)</label>
+                <label class="block text-sm font-medium text-slate-700">{{ __('settings.og_image') }}</label>
                 <input type="hidden" name="seo_og_image" value="{{ old('seo_og_image', $seoOgImageId) }}">
                 <div class="mt-1 flex items-center gap-3">
                     <img id="seo-og-preview" src="{{ $seoOgImageUrl }}" alt=""
                          class="h-16 w-28 rounded border border-slate-200 object-cover {{ $seoOgImageUrl !== '' ? '' : 'hidden' }}">
                     <button type="button" onclick="pickSettingsImage('seo_og_image', 'seo-og-preview')"
                             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
-                        Escolher da biblioteca
+                        {{ __('settings.choose_library') }}
                     </button>
                     <button type="button" onclick="clearSettingsImage('seo_og_image', 'seo-og-preview')"
-                            class="text-sm text-slate-500 hover:text-red-600">Remover</button>
+                            class="text-sm text-slate-500 hover:text-red-600">{{ __('settings.remove') }}</button>
                 </div>
                 @error('seo_og_image')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -171,9 +188,9 @@
         <div class="mt-6 flex items-center gap-3">
             <button type="submit"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
-                Salvar
+                {{ __('common.save') }}
             </button>
-            <span class="text-xs text-slate-500">A prévia é aplicada em seguida; salve para manter.</span>
+            <span class="text-xs text-slate-500">{{ __('settings.live_preview_note') }}</span>
         </div>
     </form>
 
@@ -209,6 +226,6 @@
     @include('media::picker', [
         'mode' => 'single',
         'targetField' => '',
-        'title' => 'Escolher imagem',
+        'title' => __('settings.choose_image'),
     ])
 @endsection
