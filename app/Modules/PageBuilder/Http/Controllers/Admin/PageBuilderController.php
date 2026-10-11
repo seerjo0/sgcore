@@ -2,7 +2,14 @@
 
 namespace App\Modules\PageBuilder\Http\Controllers\Admin;
 
+use App\Modules\Core\Services\Settings;
+use App\Modules\PageBuilder\Models\BuilderRevision;
 use App\Modules\PageBuilder\Services\BuilderSanitizer;
+use App\Modules\PageBuilder\Services\ComponentRegistry;
+use App\Modules\PageBuilder\Services\DesignSystem;
+use App\Modules\PageBuilder\Services\HtmlLineDiff;
+use App\Modules\PageBuilder\Services\RenderContext;
+use App\Modules\PageBuilder\Services\Renderer;
 use App\Modules\Pages\Models\Page;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +19,10 @@ class PageBuilderController extends Controller
 {
     public function __construct(
         private BuilderSanitizer $sanitizer,
+        private ComponentRegistry $registry,
+        private Renderer $renderer,
+        private Settings $settings,
+        private HtmlLineDiff $diff,
     ) {}
 
     /**
@@ -23,6 +34,9 @@ class PageBuilderController extends Controller
             'page' => $page,
             'draft' => $page->builder_draft,
             'published' => $page->builder_published,
+            'componentsMetadata' => $this->registry->metadata(),
+            'designTokens' => app(DesignSystem::class)->editorTokens(),
+            'designCss' => app(DesignSystem::class)->css(),
         ]);
     }
 
@@ -50,7 +64,9 @@ class PageBuilderController extends Controller
     }
 
     /**
-     * POST — sanitize the builder output and promote it to the public version.
+     * POST — publish: typed payloads render through the component registry
+     * (allowlist) and are versioned with a revision snapshot; payloads without
+     * registered components keep the legacy sanitized-HTML pipeline.
      */
     public function publish(Request $request, Page $page): JsonResponse
     {
@@ -69,8 +85,14 @@ class PageBuilderController extends Controller
             );
         }
 
-        $html = (string) $this->sanitizer->sanitizeHtml($validated['html']);
         $css = $this->sanitizer->sanitizeCss($validated['css']);
+        $tree = $this->registry->extract($project);
+
+        if ($tree !== null) {
+            $html = $this->registry->renderTree($tree, new RenderContext($this->settings, $page));
+        } else {
+            $html = (string) $this->sanitizer->sanitizeHtml($validated['html']);
+        }
 
         if (trim($html) === '') {
             return response()->json(
@@ -79,18 +101,112 @@ class PageBuilderController extends Controller
             );
         }
 
+        $oldVersion = max(1, (int) $page->builder_version);
+        $version = $oldVersion + 1;
+        $now = now()->toIso8601String();
+
         $page->update([
             'builder_published' => [
+                'version' => config('pagebuilder.schema_version'),
+                'published_at' => $now,
+                'components' => $tree,
                 'html' => $html,
                 'css' => $css,
-                'json' => $project,
             ],
             'builder_draft' => $project,
+            'builder_version' => $version,
         ]);
+
+        BuilderRevision::query()->create([
+            'page_id' => $page->id,
+            'version' => $version,
+            'components' => $tree,
+            'html' => $html,
+            'css' => $css,
+            'project' => $project,
+            'created_by' => $request->user()->id,
+        ]);
+
+        $this->renderer->forgetPage($page->id, $oldVersion);
 
         return response()->json([
             'ok' => true,
-            'published_at' => $page->fresh()->updated_at?->toISOString(),
+            'version' => $version,
+            'published_at' => $now,
         ]);
+    }
+
+    /**
+     * GET — published versions of the page, newest first.
+     */
+    public function revisions(Page $page): JsonResponse
+    {
+        $items = $page->revisions()
+            ->latest('id')
+            ->limit(30)
+            ->get(['id', 'version', 'created_at', 'created_by'])
+            ->map(fn (BuilderRevision $revision): array => [
+                'id' => $revision->id,
+                'version' => $revision->version,
+                'created_at' => $revision->created_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['items' => $items]);
+    }
+
+    /**
+     * GET — line diff between a stored revision and the currently published
+     * version (or the editor draft when nothing is published yet).
+     */
+    public function revisionDiff(Page $page, BuilderRevision $revision): JsonResponse
+    {
+        abort_unless($revision->page_id === $page->id, 404);
+
+        $published = is_array($page->builder_published) ? (string) ($page->builder_published['html'] ?? '') : '';
+        $current = $published !== '' ? $published : (string) ($this->registry->renderTree(
+            $this->registry->extract($page->builder_draft) ?? [],
+            new RenderContext($this->settings, $page),
+        ));
+
+        return response()->json($this->diff->compare((string) $revision->html, $current));
+    }
+
+    /**
+     * POST — restore a published version: it becomes the current one through a
+     * new version, and the editor draft returns to that revision's project.
+     */
+    public function restoreRevision(Request $request, Page $page, BuilderRevision $revision): JsonResponse
+    {
+        abort_unless($revision->page_id === $page->id, 404);
+
+        $oldVersion = max(1, (int) $page->builder_version);
+        $version = $oldVersion + 1;
+        $now = now()->toIso8601String();
+
+        $page->update([
+            'builder_published' => [
+                'version' => config('pagebuilder.schema_version'),
+                'published_at' => $now,
+                'components' => $revision->components,
+                'html' => (string) $this->sanitizer->sanitizeHtml((string) $revision->html),
+                'css' => $this->sanitizer->sanitizeCss((string) $revision->css),
+            ],
+            'builder_draft' => $revision->project ?? $page->builder_draft,
+            'builder_version' => $version,
+        ]);
+
+        BuilderRevision::query()->create([
+            'page_id' => $page->id,
+            'version' => $version,
+            'components' => $revision->components,
+            'html' => (string) $this->sanitizer->sanitizeHtml((string) $revision->html),
+            'css' => $this->sanitizer->sanitizeCss((string) $revision->css),
+            'project' => $revision->project,
+            'created_by' => $request->user()->id,
+        ]);
+
+        $this->renderer->forgetPage($page->id, $oldVersion);
+
+        return response()->json(['ok' => true, 'version' => $version]);
     }
 }

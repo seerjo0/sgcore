@@ -86,6 +86,12 @@ class SiteController extends Controller
 
     private function notFound(): Response
     {
+        $built = $this->builder->renderNotFound();
+
+        if ($built !== null) {
+            return new Response($built, 404, ['Content-Type' => 'text/html; charset=UTF-8']);
+        }
+
         return $this->renderer->render(null, '404', 404);
     }
 

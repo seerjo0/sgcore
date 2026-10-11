@@ -3,9 +3,11 @@
 namespace App\Modules\Pages\Models;
 
 use App\Modules\Media\Models\Medium;
+use App\Modules\PageBuilder\Models\BuilderRevision;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'title',
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'published_at',
     'builder_draft',
     'builder_published',
+    'builder_version',
 ])]
 class Page extends Model
 {
@@ -42,6 +45,7 @@ class Page extends Model
             'published_at' => 'datetime',
             'builder_draft' => 'array',
             'builder_published' => 'array',
+            'builder_version' => 'integer',
         ];
     }
 
@@ -66,5 +70,13 @@ class Page extends Model
     public function ogImage(): BelongsTo
     {
         return $this->belongsTo(Medium::class, 'seo_og_image');
+    }
+
+    /**
+     * Builder publish snapshots, newest first.
+     */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(BuilderRevision::class)->orderByDesc('version');
     }
 }

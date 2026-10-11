@@ -3,53 +3,216 @@
 namespace App\Modules\PageBuilder\Services;
 
 use App\Modules\Core\Services\Settings;
+use App\Modules\PageBuilder\Models\BuilderTemplate;
+use App\Modules\PageBuilder\Services\Components\ComponentNode;
 use App\Modules\Pages\Models\Menu;
 use App\Modules\Pages\Models\MenuItem;
 use App\Modules\Pages\Models\Page;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
- * Renders a page whose layout was built in the Page Builder as a standalone
- * Bootstrap 5 document: CMS chrome (header with primary menu, footer with
- * footer menu) around the sanitized builder output, with the editor's CSS
- * injected as inline <style>. Returns null when the page has no published
- * builder output (the theme renderer wins instead).
+ * Renders a published builder page as a standalone Bootstrap 5 document.
+ *
+ * Two payload shapes are supported (backward compatibility by construction):
+ *
+ *  - structured: `builder_published.components` holds the validated component
+ *    tree extracted at publish time; it is re-rendered here through the
+ *    ComponentRegistry (allowlist) so direct DB edits never emit arbitrary HTML
+ *    through unregistered types, and the result is cached per page version;
+ *  - legacy: pages published before the component engine stored plain
+ *    sanitized `html`/`css`, which keeps rendering through the old path.
+ *
+ * Site header/footer come from enabled builder templates when present, falling
+ * back to the CMS chrome (primary/footer menus). A full document is cached by
+ * {page, version, purge epoch} — publishing a page bumps its version, while
+ * templates and the design system bump the global epoch.
  */
 class Renderer
 {
+    private const EPOCH_KEY = 'pb-purge-epoch';
+
     public function __construct(
         private Settings $settings,
         private BuilderSanitizer $sanitizer,
+        private ComponentRegistry $registry,
+        private DesignSystem $design,
     ) {}
 
     public function render(Page $page): ?string
     {
         $built = $page->builder_published;
 
-        if (! is_array($built) || ! is_string($built['html'] ?? null) || trim($built['html']) === '') {
+        if (! is_array($built)) {
             return null;
         }
 
-        // Re-sanitize on render: defense in depth against direct DB edits.
-        $content = (string) $this->sanitizer->sanitizeHtml($built['html']);
-        $css = $this->sanitizer->sanitizeCss((string) ($built['css'] ?? ''));
+        $version = max(1, (int) ($page->builder_version ?? 1));
+        $key = "pb:doc:{$page->id}:v{$version}:p{$this->epoch()}";
+        $cached = Cache::get($key);
+
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
+
+        $content = $this->pageContent($page, $built);
 
         if (trim($content) === '') {
             return null;
         }
 
-        $siteName = (string) $this->settings->get('site_name', config('app.name'));
-        $title = trim((string) ($page->seo_title ?: $page->title));
+        $css = $this->sanitizer->sanitizeCss((string) ($built['css'] ?? ''));
+        $document = $this->document($content, $css, $page);
 
-        if ($title !== '' && $title !== $siteName) {
-            $title = $title.' · '.$siteName;
-        } else {
-            $title = $siteName;
+        Cache::put($key, $document, (int) config('pagebuilder.cache_ttl_seconds'));
+
+        return $document;
+    }
+
+    /**
+     * Render the not-found template as a full document (null when the builder
+     * 404 is not enabled, so the theme keeps handling errors).
+     */
+    public function renderNotFound(): ?string
+    {
+        $body = $this->templateHtml('not_found');
+
+        if ($body === null || trim($body) === '') {
+            return null;
         }
 
-        $description = trim((string) ($page->seo_description ?: ''));
+        $css = $this->templateCss('not_found');
+        $title = __('pagebuilder.not_found_title').' · '.$this->siteName();
+
+        return $this->document($body, $css, null, $title);
+    }
+
+    /**
+     * Invalidate one page's cached documents (old version keys expire by TTL).
+     */
+    public function forgetPage(int $pageId, int $version): void
+    {
+        Cache::forget("pb:doc:{$pageId}:v{$version}:p{$this->epoch()}");
+    }
+
+    /**
+     * Bump the global purge epoch: every cached document/template render is
+     * abandoned and rebuilt on the next request. A monotonic counter (not a
+     * timestamp) so two bumps in the same second still produce new keys.
+     */
+    public function purge(): void
+    {
+        if (! Cache::has(self::EPOCH_KEY)) {
+            Cache::add(self::EPOCH_KEY, 0, now()->addDays(30));
+        }
+
+        Cache::increment(self::EPOCH_KEY);
+    }
+
+    private function epoch(): int
+    {
+        return (int) Cache::get(self::EPOCH_KEY, 0);
+    }
+
+    /**
+     * @param  array<string, mixed>  $built
+     */
+    private function pageContent(Page $page, array $built): string
+    {
+        $tree = $this->tree($built);
+
+        if ($tree !== null) {
+            return $this->registry->renderTree($tree, new RenderContext($this->settings, $page));
+        }
+
+        // Legacy payload: re-sanitize on render (defense in depth against DB edits).
+        return (string) $this->sanitizer->sanitizeHtml((string) ($built['html'] ?? ''));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return list<ComponentNode>|null
+     */
+    private function tree(array $payload): ?array
+    {
+        $raw = is_array($payload['components'] ?? null) ? $payload['components'] : null;
+
+        if ($raw === null || $raw === []) {
+            return null;
+        }
+
+        return array_values(array_map(
+            static fn (array $node): ComponentNode => ComponentNode::fromArray($node),
+            array_filter($raw, 'is_array'),
+        ));
+    }
+
+    private function templateHtml(string $type): ?string
+    {
+        $template = BuilderTemplate::query()
+            ->where('type', $type)
+            ->where('enabled', true)
+            ->first();
+
+        if ($template === null) {
+            return null;
+        }
+
+        $key = "pb:tpl:{$type}:v{$template->version}:p{$this->epoch()}";
+        $cached = Cache::get($key);
+
+        if (is_string($cached)) {
+            return $cached !== '' ? $cached : null;
+        }
+
+        $tree = $template->tree();
+        $html = $tree !== null
+            ? $this->registry->renderTree($tree, new RenderContext($this->settings))
+            : (string) $this->sanitizer->sanitizeHtml((string) $template->html);
+
+        Cache::put($key, $html, (int) config('pagebuilder.cache_ttl_seconds'));
+
+        return $html;
+    }
+
+    private function templateCss(string $type): string
+    {
+        $template = BuilderTemplate::query()
+            ->where('type', $type)
+            ->where('enabled', true)
+            ->first();
+
+        return $template === null
+            ? ''
+            : $this->sanitizer->sanitizeCss((string) ($template->css ?? ''));
+    }
+
+    private function siteName(): string
+    {
+        return (string) $this->settings->get('site_name', config('app.name'));
+    }
+
+    /**
+     * Assemble the standalone document: SEO head, Bootstrap + design tokens +
+     * editor CSS, template header/footer chrome when enabled, CMS menus inside.
+     */
+    private function document(string $content, string $css, ?Page $page, ?string $title = null): string
+    {
+        $siteName = $this->siteName();
+
+        if ($title === null) {
+            $title = $page === null ? $siteName : trim((string) ($page->seo_title ?: $page->title));
+
+            if ($title !== '' && $title !== $siteName) {
+                $title = $title.' · '.$siteName;
+            } else {
+                $title = $siteName;
+            }
+        }
+
+        $description = $page === null ? '' : trim((string) ($page->seo_description ?: ''));
         $description = $description !== '' ? $description : trim((string) $this->settings->get('seo_description', ''));
-        $ogImage = $this->ogImage($page);
+        $ogImage = $page !== null ? $this->ogImage($page) : null;
 
         $body = '<!DOCTYPE html>'
             .'<html lang="'.$this->langAttr().'">'
@@ -71,7 +234,7 @@ class Renderer
             $body .= '<meta property="og:image" content="'.htmlspecialchars($ogImage, ENT_QUOTES, 'UTF-8').'">';
         }
 
-        $safeCss = str_replace('</style', '<\/style', $css);
+        $safeCss = str_replace('</style', '<\/style', $css.$this->design->css());
         $chromeCss = '.pb-nav-link{color:#334155;font-weight:500;padding:.25rem .5rem;border-radius:.375rem}'
             .'.pb-nav-link:hover{color:#0d6efd}'
             .'.pb-footer-nav a{color:#cbd5e1;text-decoration:none}'
@@ -97,6 +260,12 @@ class Renderer
 
     private function header(string $siteName): string
     {
+        $template = $this->templateHtml('header');
+
+        if ($template !== null && trim($template) !== '') {
+            return $template;
+        }
+
         return '<header class="pb-header py-3 mb-4 border-bottom bg-white">'
             .'<div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">'
             .'<a href="/" class="pb-brand h4 mb-0 text-decoration-none text-dark">'.htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8').'</a>'
@@ -106,6 +275,12 @@ class Renderer
 
     private function footer(string $siteName): string
     {
+        $template = $this->templateHtml('footer');
+
+        if ($template !== null && trim($template) !== '') {
+            return $template;
+        }
+
         $year = now()->year;
 
         return '<footer class="pb-footer py-4 mt-5 bg-dark text-white-50">'

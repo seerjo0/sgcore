@@ -267,6 +267,24 @@ class BuilderSanitizer
     }
 
     /**
+     * Scheme-safe href/src for component props: invalid values collapse to ''.
+     */
+    public function safeUrl(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        return $this->sanitizeUrl($value) ?? '';
+    }
+
+    /**
      * @param  array<int, string>  $match
      */
     private function cleanCssUrl(array $match): string

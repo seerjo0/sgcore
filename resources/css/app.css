@@ -263,3 +263,24 @@ html.dark {
 .dark .admin-surface .text-amber-700 {
     color: #fcd34d;
 }
+
+/*
+|--------------------------------------------------------------------------
+| Sidebar responsiva (gaveta no mobile)
+|--------------------------------------------------------------------------
+| No mobile (< lg / 1024px) a sidebar vira uma gaveta fora da tela que
+| desliza ao receber [data-open="true"], com fundo escuro por trás. No
+| desktop ela volta ao fluxo normal (a regra fica toda dentro da media
+| query, então acima de 1024px nada se aplica). Regras fora de @layer
+| vencem as utilities, acompanhando o padrão do remap de tema acima.
+*/
+@media (max-width: 1023.98px) {
+    #admin-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.2s ease-in-out;
+    }
+
+    #admin-sidebar[data-open='true'] {
+        transform: translateX(0);
+    }
+}

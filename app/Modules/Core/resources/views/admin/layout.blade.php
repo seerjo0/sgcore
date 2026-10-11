@@ -12,7 +12,10 @@
 <body class="min-h-screen bg-slate-100 text-slate-800 antialiased">
 <div class="flex min-h-screen">
 
-    <aside class="flex w-64 shrink-0 flex-col bg-slate-900 text-slate-200">
+    <div id="admin-sidebar-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/50 lg:hidden" aria-hidden="true"></div>
+
+    <aside id="admin-sidebar" data-open="false"
+           class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 text-slate-200 lg:static lg:z-auto">
         <div class="border-b border-slate-700 px-5 py-4">
             <a href="{{ route('admin.dashboard') }}" class="block text-lg font-semibold text-white hover:text-white">
                 SG Core
@@ -30,6 +33,10 @@
                 <a href="{{ route('admin.paginas.index') }}"
                    class="block rounded px-3 py-2 {{ request()->routeIs('admin.paginas.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
                     {{ __('nav.pages') }}
+                </a>
+                <a href="{{ route('admin.builder.templates.index') }}"
+                   class="block rounded px-3 py-2 {{ request()->routeIs('admin.builder.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
+                    {{ __('nav.builder_templates') }}
                 </a>
             @endcan
 
@@ -91,7 +98,18 @@
 
     <div class="admin-surface flex min-w-0 flex-1 flex-col">
         <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-            <h1 class="text-base font-semibold">@yield('title', __('nav.dashboard'))</h1>
+            <div class="flex min-w-0 items-center gap-3">
+                <button type="button" id="admin-sidebar-toggle"
+                        class="-ml-2 rounded p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+                        aria-controls="admin-sidebar" aria-expanded="false"
+                        aria-label="{{ __('nav.open_menu') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="block h-6 w-6" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <h1 class="truncate text-base font-semibold">@yield('title', __('nav.dashboard'))</h1>
+            </div>
             <span class="text-sm text-slate-500">{{ auth()->user()->email }}</span>
         </header>
 

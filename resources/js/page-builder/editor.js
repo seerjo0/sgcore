@@ -10,6 +10,7 @@ import 'grapesjs/dist/css/grapes.min.css';
 
     const S = cfg.strings;
     const B = S.blocks;
+    const NATIVE_ATTRS = ['src', 'alt', 'title', 'href', 'width', 'height', 'type', 'name', 'value', 'placeholder'];
 
     const mediaIcon = '<svg viewBox="0 0 24 24" width="34" height="34"><path fill="currentColor" d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
     const blockIcon = '<svg viewBox="0 0 24 24" width="34" height="34"><path fill="currentColor" d="M3 5h18v14H3V5zm2 2v10h14V7H5z"/></svg>';
@@ -25,11 +26,7 @@ import 'grapesjs/dist/css/grapes.min.css';
             storageType: 'none',
         },
         deviceManager: {
-            devices: [
-                { id: 'desktop', name: 'Desktop', width: '' },
-                { id: 'tablet', name: 'Tablet', width: '768px', widthMedia: '992px' },
-                { id: 'mobile', name: 'Mobile', width: '480px', widthMedia: '767px' },
-            ],
+            devices: buildDevices(),
         },
         canvas: {
             styles: [cfg.bootstrapCss],
@@ -55,6 +52,9 @@ import 'grapesjs/dist/css/grapes.min.css';
             },
         },
     });
+
+    registerComponentTypes();
+    syncContentProps();
 
     editor.Traits.addType('media-picker-btn', {
         createInput({ component }) {
@@ -104,10 +104,17 @@ import 'grapesjs/dist/css/grapes.min.css';
 
     editor.on('load', () => {
         if (cfg.draft && cfg.draft.components) {
-            editor.setProjectData(cfg.draft);
+            editor.loadProjectData(cfg.draft);
         }
 
-        editor.setClear();
+        if (cfg.designCss) {
+            const doc = editor.Canvas.getDocument();
+
+            if (doc && doc.head) {
+                doc.head.insertAdjacentHTML('beforeend', '<style data-pb-tokens>' + cfg.designCss + '</style>');
+            }
+        }
+
         loaded = true;
     });
 
@@ -128,6 +135,10 @@ import 'grapesjs/dist/css/grapes.min.css';
     });
 
     publishBtn.addEventListener('click', publish);
+
+    if (cfg.mode === 'page') {
+        setupRevisions();
+    }
 
     async function saveDraft() {
         if (saveInFlight) {
@@ -197,11 +208,236 @@ import 'grapesjs/dist/css/grapes.min.css';
             } else {
                 setStatus(S.statusUnsaved);
                 const body = await response.json().catch(() => null);
-                toast(body?.errors?.html?.[0] ?? S.publishError, 'error');
+                toast(body?.errors?.html?.[0] ?? body?.errors?.json?.[0] ?? S.publishError, 'error');
             }
         } catch (error) {
             setStatus(S.statusUnsaved);
             toast(S.publishError, 'error');
+        }
+    }
+
+    function registerComponentTypes() {
+        (cfg.components ?? []).forEach((meta) => {
+            if (meta.type === 'image' || meta.type === 'button') {
+                return;
+            }
+
+            const traits = [];
+
+            Object.entries(meta.props ?? {}).forEach(([key, def]) => {
+                if (key === 'content') {
+                    return;
+                }
+
+                const attr = NATIVE_ATTRS.includes(key) ? key : 'data-pb-' + key;
+
+                if (def.type === 'select') {
+                    traits.push({
+                        type: 'select',
+                        label: def.label,
+                        name: attr,
+                        options: (def.options ?? []).map((v) => ({ value: v, label: v, name: v })),
+                    });
+                } else if (def.type === 'textarea') {
+                    traits.push({ type: 'textarea', label: def.label, name: attr });
+                } else {
+                    traits.push({ type: 'text', label: def.label, name: attr });
+                }
+            });
+
+            editor.DomComponents.addType('pb-' + meta.type, {
+                isComponent: (el) => el.hasAttribute && el.getAttribute('data-pb-type') === meta.type,
+                model: {
+                    defaults: () => ({
+                        traits,
+                        ...(meta.defaults?.href !== undefined ? { href: meta.defaults.href } : {}),
+                    }),
+                },
+            });
+        });
+    }
+
+    function syncContentProps() {
+        const contentTypes = ['heading', 'text', 'alert', 'badge', 'button', 'blockquote'];
+
+        editor.on('component:update:content', (component) => {
+            const attrs = component.getAttributes() ?? {};
+            const type = attrs['data-pb-type'];
+
+            if (!type || !contentTypes.includes(type)) {
+                return;
+            }
+
+            const content = component.getContent() ?? '';
+            const patch = {};
+
+            if ((attrs['data-pb-content'] ?? '') !== content) {
+                patch['data-pb-content'] = content;
+            }
+
+            if (type === 'button') {
+                const plain = String(content).replace(/<[^>]*>/g, '');
+
+                if ((attrs['data-pb-text'] ?? '') !== plain) {
+                    patch['data-pb-text'] = plain;
+                }
+            }
+
+            if (Object.keys(patch).length > 0) {
+                component.addAttributes(patch);
+            }
+        });
+    }
+
+    async function setupRevisions() {
+        const btn = document.getElementById('pb-history-btn');
+        const panel = document.getElementById('pb-history');
+        const list = document.getElementById('pb-history-items');
+
+        if (!btn || !panel || !list) {
+            return;
+        }
+
+        btn.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+
+            if (!panel.classList.contains('hidden')) {
+                loadRevisions(list);
+            }
+        });
+    }
+
+    async function loadRevisions(list) {
+        list.innerHTML = '<div class="pb-history-empty">…</div>';
+
+        try {
+            const response = await fetch(cfg.endpoints.revisions, {
+                headers: { Accept: 'application/json' },
+            });
+            const body = await response.json();
+            const items = body?.items ?? [];
+
+            list.innerHTML = '';
+
+            if (items.length === 0) {
+                list.innerHTML = '<div class="pb-history-empty">' + escapeHtml(S.historyEmpty) + '</div>';
+
+                return;
+            }
+
+            items.forEach((item) => {
+                const row = document.createElement('div');
+                row.className = 'pb-history-item';
+
+                const label = document.createElement('span');
+                label.textContent = S.historyVersion + ' ' + item.version
+                    + ' · ' + new Date(item.created_at).toLocaleString();
+
+                const restore = document.createElement('button');
+                restore.type = 'button';
+                restore.className = 'gjs-btn-prim';
+                restore.textContent = S.historyRestore;
+                restore.addEventListener('click', () => restoreRevision(item.id, list));
+
+                const diff = document.createElement('button');
+                diff.type = 'button';
+                diff.className = 'gjs-btn-prim';
+                diff.style.marginRight = '6px';
+                diff.textContent = S.historyDiff;
+                diff.addEventListener('click', () => showDiff(item.id, item.version, list));
+
+                row.appendChild(label);
+                row.appendChild(diff);
+                row.appendChild(restore);
+                list.appendChild(row);
+            });
+        } catch (error) {
+            list.innerHTML = '<div class="pb-history-empty">' + escapeHtml(S.historyError) + '</div>';
+        }
+    }
+
+    async function showDiff(id, version, list) {
+        let box = list.querySelector('.pb-history-diff');
+
+        if (box && box.dataset.for === String(id)) {
+            box.remove();
+
+            return;
+        }
+
+        list.querySelectorAll('.pb-history-diff').forEach((el) => el.remove());
+        box = document.createElement('div');
+        box.className = 'pb-history-diff';
+        box.dataset.for = String(id);
+        box.textContent = S.diffLoading;
+        list.insertBefore(box, list.firstChild);
+
+        try {
+            const url = String(cfg.endpoints.diff).replace('{id}', id);
+            const response = await fetch(url, { headers: { Accept: 'application/json' } });
+
+            if (!response.ok) {
+                box.textContent = S.diffError;
+
+                return;
+            }
+
+            const body = await response.json();
+            const lines = body?.lines ?? [];
+
+            box.innerHTML = '';
+
+            if (body?.truncated) {
+                const note = document.createElement('div');
+                note.className = 'pb-history-empty';
+                note.textContent = S.diffTruncated;
+                box.appendChild(note);
+            }
+
+            if (lines.length === 0) {
+                const none = document.createElement('div');
+                none.className = 'pb-history-empty';
+                none.textContent = S.diffNochange;
+                box.appendChild(none);
+
+                return;
+            }
+
+            lines.forEach((line) => {
+                const rowLine = document.createElement('div');
+                rowLine.className = 'pb-diff-line pb-diff-' + line.t;
+                rowLine.textContent = (line.t === 'add' ? '+ ' : line.t === 'del' ? '- ' : '  ') + line.s;
+                box.appendChild(rowLine);
+            });
+        } catch (error) {
+            box.textContent = S.diffError;
+        }
+    }
+
+    async function restoreRevision(id, list) {
+        if (!window.confirm(S.historyRestoreConfirm)) {
+            return;
+        }
+
+        const url = String(cfg.endpoints.restore).replace('{id}', id);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+            });
+
+            if (response.ok) {
+                toast(S.historyRestored, 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                toast(S.historyError, 'error');
+            }
+        } catch (error) {
+            toast(S.historyError, 'error');
         }
     }
 
@@ -216,7 +452,10 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.section,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<section class="pb-section bg-light py-5"><div class="container"><div class="row"><div class="col"></div></div></div></section>',
+                content: '<section class="pb-section bg-light py-5" data-pb-type="section">'
+                    + '<div class="container" data-pb-type="container">'
+                    + '<div class="row" data-pb-type="row"><div class="col" data-pb-type="column"></div></div>'
+                    + '</div></section>',
                 activate: true,
                 select: true,
             },
@@ -225,7 +464,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.container,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<div class="container"></div>',
+                content: '<div class="container" data-pb-type="container"></div>',
                 activate: true,
                 select: true,
             },
@@ -234,7 +473,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.row,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<div class="row g-3"></div>',
+                content: '<div class="row g-3" data-pb-type="row"></div>',
                 activate: true,
                 select: true,
             },
@@ -243,7 +482,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.column,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<div class="col"></div>',
+                content: '<div class="col" data-pb-type="column"></div>',
                 activate: true,
                 select: true,
             },
@@ -252,7 +491,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.spacer,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<div class="pb-spacer" style="height: 48px;"></div>',
+                content: '<div class="pb-spacer" data-pb-type="spacer" data-pb-height="48px" style="height: 48px;"></div>',
                 select: true,
             },
             {
@@ -260,7 +499,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.divider,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<hr class="pb-divider my-4">',
+                content: '<hr class="pb-divider my-4" data-pb-type="divider">',
                 select: true,
             },
             {
@@ -268,11 +507,11 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.banner,
                 category: categoryLayout,
                 media: blockIcon,
-                content: '<section class="pb-banner text-center text-white bg-primary py-5">'
-                    + '<div class="container">'
-                    + '<h2 class="display-4">' + escapeHtml(B.sampleBannerTitle) + '</h2>'
-                    + '<p class="lead mb-4">' + escapeHtml(B.sampleBannerLead) + '</p>'
-                    + '<a class="btn btn-light btn-lg" href="#">' + escapeHtml(B.sampleBannerBtn) + '</a>'
+                content: '<section class="pb-banner text-center text-white bg-primary py-5" data-pb-type="section">'
+                    + '<div class="container" data-pb-type="container">'
+                    + '<h2 class="pb-heading display-4" data-pb-type="heading">' + escapeHtml(B.sampleBannerTitle) + '</h2>'
+                    + '<p class="pb-text lead mb-4" data-pb-type="text">' + escapeHtml(B.sampleBannerLead) + '</p>'
+                    + '<a class="btn btn-light btn-lg" data-pb-type="button" data-pb-text="' + escapeHtml(B.sampleBannerBtn) + '" href="#">' + escapeHtml(B.sampleBannerBtn) + '</a>'
                     + '</div></section>',
                 activate: true,
                 select: true,
@@ -282,7 +521,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.heading,
                 category: categoryContent,
                 media: blockIcon,
-                content: '<h2 class="display-6">' + escapeHtml(B.sampleHeading) + '</h2>',
+                content: '<h2 class="pb-heading display-6" data-pb-type="heading">' + escapeHtml(B.sampleHeading) + '</h2>',
                 select: true,
             },
             {
@@ -290,7 +529,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.text,
                 category: categoryContent,
                 media: blockIcon,
-                content: '<p class="lead">' + escapeHtml(B.sampleText) + '</p>',
+                content: '<p class="pb-text" data-pb-type="text">' + escapeHtml(B.sampleText) + '</p>',
                 select: true,
             },
             {
@@ -298,7 +537,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.image,
                 category: categoryContent,
                 media: mediaIcon,
-                content: '<img class="img-fluid pb-media-image pb-3" src="" alt="">',
+                content: '<img class="img-fluid pb-media-image pb-3" data-pb-type="image" src="" alt="">',
                 activate: true,
                 select: true,
             },
@@ -307,7 +546,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.button,
                 category: categoryContent,
                 media: blockIcon,
-                content: '<a class="btn btn-primary" href="#">' + escapeHtml(B.sampleButton) + '</a>',
+                content: '<a class="btn btn-primary" data-pb-type="button" data-pb-text="' + escapeHtml(B.sampleButton) + '" href="#">' + escapeHtml(B.sampleButton) + '</a>',
                 select: true,
             },
             {
@@ -315,22 +554,11 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.list,
                 category: categoryContent,
                 media: blockIcon,
-                content: '<ul class="list-group list-group-flush">'
+                content: '<ul class="list-group list-group-flush" data-pb-type="list" data-pb-items="'
+                    + escapeHtml(B.sampleListItem + '\n' + B.sampleListItem) + '">'
                     + '<li class="list-group-item">' + escapeHtml(B.sampleListItem) + '</li>'
                     + '<li class="list-group-item">' + escapeHtml(B.sampleListItem) + '</li>'
                     + '</ul>',
-                select: true,
-            },
-            {
-                id: 'pb-table',
-                label: B.table,
-                category: categoryContent,
-                media: blockIcon,
-                content: '<table class="table table-striped"><thead>'
-                    + '<tr><th scope="col">' + escapeHtml(B.sampleTableH1) + '</th><th scope="col">' + escapeHtml(B.sampleTableH2) + '</th></tr>'
-                    + '</thead><tbody>'
-                    + '<tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr>'
-                    + '</tbody></table>',
                 select: true,
             },
             {
@@ -338,10 +566,10 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.card,
                 category: categoryComponents,
                 media: blockIcon,
-                content: '<div class="card h-100"><div class="card-body">'
-                    + '<h5 class="card-title">' + escapeHtml(B.sampleCardTitle) + '</h5>'
-                    + '<p class="card-text">' + escapeHtml(B.sampleCardText) + '</p>'
-                    + '<a class="btn btn-primary" href="#">' + escapeHtml(B.sampleCardBtn) + '</a>'
+                content: '<div class="card h-100" data-pb-type="card"><div class="card-body">'
+                    + '<h5 class="pb-heading card-title" data-pb-type="heading" data-pb-level="5">' + escapeHtml(B.sampleCardTitle) + '</h5>'
+                    + '<p class="pb-text card-text" data-pb-type="text">' + escapeHtml(B.sampleCardText) + '</p>'
+                    + '<a class="btn btn-primary" data-pb-type="button" data-pb-text="' + escapeHtml(B.sampleCardBtn) + '" href="#">' + escapeHtml(B.sampleCardBtn) + '</a>'
                     + '</div></div>',
                 activate: true,
                 select: true,
@@ -351,7 +579,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.alert,
                 category: categoryComponents,
                 media: blockIcon,
-                content: '<div class="alert alert-primary" role="alert">' + escapeHtml(B.sampleAlert) + '</div>',
+                content: '<div class="alert alert-primary pb-alert" data-pb-type="alert" role="alert">' + escapeHtml(B.sampleAlert) + '</div>',
                 select: true,
             },
             {
@@ -359,13 +587,62 @@ import 'grapesjs/dist/css/grapes.min.css';
                 label: B.badge,
                 category: categoryComponents,
                 media: blockIcon,
-                content: '<p><span class="badge bg-primary">' + escapeHtml(B.sampleButton) + '</span></p>',
+                content: '<span class="badge text-bg-primary pb-badge" data-pb-type="badge">' + escapeHtml(B.sampleButton) + '</span>',
+                select: true,
+            },
+            {
+                id: 'pb-video',
+                label: B.video,
+                category: categoryContent,
+                media: blockIcon,
+                content: '<div class="pb-video" data-pb-type="video" data-pb-src="" data-pb-poster="" data-pb-aspect="16x9" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#f1f5f9;color:#94a3b8">Vídeo</div>',
+                select: true,
+            },
+            {
+                id: 'pb-youtube',
+                label: B.youtube,
+                category: categoryContent,
+                media: blockIcon,
+                content: '<div class="pb-youtube" data-pb-type="youtube" data-pb-id="" data-pb-aspect="16x9" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#f1f5f9;color:#94a3b8">YouTube</div>',
+                select: true,
+            },
+            {
+                id: 'pb-blockquote',
+                label: B.blockquote,
+                category: categoryContent,
+                media: blockIcon,
+                content: '<blockquote class="blockquote pb-blockquote" data-pb-type="blockquote" data-pb-cite="' + escapeHtml(B.sampleQuoteCite) + '">' + escapeHtml(B.sampleQuote) + '</blockquote>',
+                select: true,
+            },
+            {
+                id: 'pb-icon',
+                label: B.icon,
+                category: categoryComponents,
+                media: blockIcon,
+                content: '<span class="pb-icon d-inline-flex pb-text-primary" data-pb-type="icon" data-pb-icon="star" data-pb-size="md" data-pb-variant="primary" style="height:1.75rem;width:1.75rem">*</span>',
                 select: true,
             },
         ];
     }
 
+    function buildDevices() {
+        const bp = {};
+        ((cfg.designTokens ?? {}).breakpoints ?? []).forEach((b) => {
+            if (b && b.name && b.value) {
+                bp[b.name] = b.value;
+            }
+        });
+
+        return [
+            { id: 'desktop', name: 'Desktop', width: '' },
+            { id: 'tablet', name: 'Tablet', width: bp.md || '768px', widthMedia: bp.lg || '992px' },
+            { id: 'mobile', name: 'Mobile', width: '480px', widthMedia: bp.sm || '767px' },
+        ];
+    }
+
     function buildStyleManager() {
+        const opts = (list) => list.map((v) => ({ id: v, label: v }));
+
         return {
             sectors: [
                 {
@@ -383,6 +660,9 @@ import 'grapesjs/dist/css/grapes.min.css';
                         'line-height', 'text-align', 'text-decoration', 'text-shadow',
                         'color', 'font-style',
                     ],
+                    properties: [
+                        { property: 'color', type: 'color', preview: true },
+                    ],
                 },
                 {
                     name: B.categoryStyleDecorations,
@@ -390,6 +670,10 @@ import 'grapesjs/dist/css/grapes.min.css';
                         'background-color', 'background-image', 'background-repeat',
                         'background-position', 'background-size', 'box-shadow',
                         'border-radius', 'border', 'border-color', 'border-style', 'border-width',
+                    ],
+                    properties: [
+                        { property: 'background-color', type: 'color', preview: true },
+                        { property: 'border-color', type: 'color' },
                     ],
                 },
                 {
@@ -402,23 +686,23 @@ import 'grapesjs/dist/css/grapes.min.css';
                             property: 'flex-direction',
                             type: 'select',
                             defaults: 'row',
-                            options: ['row', 'row-reverse', 'column', 'column-reverse'],
+                            options: opts(['row', 'row-reverse', 'column', 'column-reverse']),
                         },
                         {
                             property: 'flex-wrap',
                             type: 'select',
                             defaults: 'nowrap',
-                            options: ['nowrap', 'wrap', 'wrap-reverse'],
+                            options: opts(['nowrap', 'wrap', 'wrap-reverse']),
                         },
                         {
                             property: 'justify-content',
                             type: 'select',
-                            options: ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'],
+                            options: opts(['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly']),
                         },
                         {
                             property: 'align-items',
                             type: 'select',
-                            options: ['stretch', 'flex-start', 'center', 'flex-end', 'baseline'],
+                            options: opts(['stretch', 'flex-start', 'center', 'flex-end', 'baseline']),
                         },
                     ],
                 },
