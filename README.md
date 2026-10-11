@@ -20,6 +20,7 @@ Here's what comes included:
 - Modular architecture
 - Self-hosted admin panel
 - Pages with rich-text content
+- Visual page builder (drag-and-drop, GrapesJS)
 - Media library and galleries
 - Customizable theme engine
 - Nested menus
@@ -27,6 +28,8 @@ Here's what comes included:
 - SEO settings
 - Light and dark panel themes
 - Configurable admin path
+- Installable modules (WordPress-style)
+- Brazilian Portuguese and English admin panel
 
 ## Why sgcore?
 
@@ -46,9 +49,12 @@ The CMS is split into independent modules:
 - Auth
 - Media
 - Pages
+- PageBuilder
 - Themes
 
 This keeps things organized and gives you a clean base to build on.
+
+Modules can be activated, deactivated, installed from a ZIP, or deleted from the **Modules** screen in the admin panel (WordPress-style), without touching the codebase. Protected modules (`core`, `installer`, `auth`) and all built-in modules are immutable, so a dependency can never be removed out from under another.
 
 ### Guided installation
 
@@ -83,6 +89,20 @@ Create and organize content with:
 - Draft and published states
 - Sanitized rich-text content
 - Nested menus
+
+### Visual site builder
+
+Build layouts by dragging components onto a GrapesJS canvas (Bootstrap 5). Publishing is versioned and safe by design:
+
+- An allowlisted component registry — every block renders through a server-side Blade view, so user content is never executed as code
+- 18 built-in components (sections, columns, headings, text, images, buttons, video, YouTube embeds, quotes, icons, cards, lists, alerts, badges…)
+- Structured publishing: the GrapesJS project is reduced to a validated component tree and re-rendered on the public page
+- Restorable publish revisions with a line-by-line diff
+- A global design system (colors, fonts, spacing scale, breakpoints) shared by the editor and the front-end
+- Dynamic bindings (`{site:name}`, `{page:title}`, `{year}`, `{media:ID}`)
+- Site-wide header/footer/404 templates and render caching
+
+Full details live in [`docs/visual-site-builder.md`](docs/visual-site-builder.md).
 
 ### Theme engine
 
@@ -123,9 +143,9 @@ ADMIN_PATH=/administrator
 
 During installation, you can opt to create sample pages and a menu to get started faster.
 
-### Brazilian Portuguese admin panel
+### Brazilian Portuguese and English admin panel
 
-The admin interface is in Brazilian Portuguese (pt-BR).
+The admin interface ships in Brazilian Portuguese (pt-BR) and English (en-US). The language is chosen during installation and can be switched at any time from **Settings → Language**, which updates the panel, the login, and the public site on the next request.
 
 ## Requirements
 
@@ -245,7 +265,7 @@ Then configure your web server to point to the project's `public/` directory.
 Once sgcore is installed:
 
 1. Log in to the admin panel.
-2. Create your pages and organize them with nested menus.
+2. Create your pages — write rich text or lay them out with the visual builder — and organize them with nested menus.
 3. Upload media and create galleries as needed.
 4. Pick and customize a theme.
 5. Set up your site identity — name, logo, favicon.
