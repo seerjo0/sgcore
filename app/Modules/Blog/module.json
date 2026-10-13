@@ -1,0 +1,8 @@
+{
+    "name": "Blog",
+    "slug": "blog",
+    "version": "1.0.0",
+    "description": "Publicação de posts com categorias, sanificação de conteúdo e páginas públicas de arquivo/artigo.",
+    "author": "SG Core",
+    "requires": ["media", "pages"]
+}

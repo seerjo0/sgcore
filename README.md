@@ -21,6 +21,7 @@ Here's what comes included:
 - Self-hosted admin panel
 - Pages with rich-text content
 - Visual page builder (drag-and-drop, GrapesJS)
+- Blog with posts and categories
 - Media library and galleries
 - Customizable theme engine
 - Nested menus
@@ -47,6 +48,7 @@ The CMS is split into independent modules:
 - Core
 - Installer
 - Auth
+- Blog
 - Media
 - Pages
 - PageBuilder
@@ -89,6 +91,16 @@ Create and organize content with:
 - Draft and published states
 - Sanitized rich-text content
 - Nested menus
+
+### Blog
+
+Publish articles with posts and categories:
+
+- Post CRUD with auto/unique slugs, excerpt, cover image and per-post SEO
+- Draft, published and future-scheduled states (scheduled posts stay hidden until due)
+- A public archive at `/blog` with pagination and category filtering, plus `/blog/{slug}` for each post
+- Post bodies run through the same allow-list sanitizer as pages (`<script>`, `javascript:` and event handlers are stripped)
+- Managed by the same editor role (its own `manage-blog` permission)
 
 ### Visual site builder
 
@@ -266,12 +278,13 @@ Once sgcore is installed:
 
 1. Log in to the admin panel.
 2. Create your pages — write rich text or lay them out with the visual builder — and organize them with nested menus.
-3. Upload media and create galleries as needed.
-4. Pick and customize a theme.
-5. Set up your site identity — name, logo, favicon.
-6. Configure SEO settings (title, description, Open Graph).
-7. Customize the admin panel with light/dark mode and an accent color.
-8. Change the admin path via `ADMIN_PATH` if you want a custom URL.
+3. Publish articles on the blog and group them by category.
+4. Upload media and create galleries as needed.
+5. Pick and customize a theme.
+6. Set up your site identity — name, logo, favicon.
+7. Configure SEO settings (title, description, Open Graph).
+8. Customize the admin panel with light/dark mode and an accent color.
+9. Change the admin path via `ADMIN_PATH` if you want a custom URL.
 
 ## Support & donate
 

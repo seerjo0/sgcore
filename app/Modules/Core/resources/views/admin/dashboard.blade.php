@@ -57,6 +57,19 @@
                 </li>
             @endcan
 
+            @can('manage-blog')
+                <li>
+                    <a href="{{ route('admin.posts.index') }}" class="block rounded bg-slate-50 px-3 py-2 hover:bg-slate-100">
+                        {{ __('nav.blog') }}
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('admin.categorias.index') }}" class="block rounded bg-slate-50 px-3 py-2 hover:bg-slate-100">
+                        {{ __('blog.categories') }}
+                    </a>
+                </li>
+            @endcan
+
             @can('manage-media')
                 <li>
                     <a href="{{ route('admin.midia.index') }}" class="block rounded bg-slate-50 px-3 py-2 hover:bg-slate-100">

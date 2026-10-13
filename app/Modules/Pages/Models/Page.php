@@ -30,7 +30,7 @@ class Page extends Model
      *
      * @var list<string>
      */
-    public const RESERVED_SLUGS = ['admin', 'instalar', 'media', 'storage', 'theme-assets', 'up'];
+    public const RESERVED_SLUGS = ['admin', 'instalar', 'media', 'storage', 'theme-assets', 'blog', 'up'];
 
     /**
      * Get the attributes that should be cast.

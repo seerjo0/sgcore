@@ -40,6 +40,13 @@
                 </a>
             @endcan
 
+            @can('manage-blog')
+                <a href="{{ route('admin.posts.index') }}"
+                   class="block rounded px-3 py-2 {{ request()->routeIs('admin.posts.*', 'admin.categorias.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
+                    {{ __('nav.blog') }}
+                </a>
+            @endcan
+
             @can('manage-media')
                 <a href="{{ route('admin.midia.index') }}"
                    class="block rounded px-3 py-2 {{ request()->routeIs('admin.midia.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
