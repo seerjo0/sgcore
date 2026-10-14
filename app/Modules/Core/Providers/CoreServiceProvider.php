@@ -5,9 +5,11 @@ namespace App\Modules\Core\Providers;
 use App\Models\User;
 use App\Modules\Auth\Enums\Role;
 use App\Modules\Core\Console\InstallCommand;
+use App\Modules\Core\Console\ServeCommand;
 use App\Modules\Core\Console\UninstallCommand;
 use App\Modules\Core\InstallSteps\DefaultSettingsStep;
 use App\Modules\Core\Services\DatabaseSetup;
+use App\Modules\Core\Services\DevServerManager;
 use App\Modules\Core\Services\EnvironmentWriter;
 use App\Modules\Core\Services\InstallerLock;
 use App\Modules\Core\Services\InstallerService;
@@ -35,6 +37,7 @@ class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(EnvironmentWriter::class);
         $this->app->singleton(DatabaseSetup::class);
         $this->app->singleton(InstallerService::class);
+        $this->app->singleton(DevServerManager::class, fn (): DevServerManager => new DevServerManager);
         $this->app->singleton(ModuleManifest::class);
         $this->app->singleton(ModuleState::class);
         $this->app->singleton(ModuleDiscovery::class);
@@ -57,6 +60,7 @@ class CoreServiceProvider extends ServiceProvider
         $this->commands([
             InstallCommand::class,
             UninstallCommand::class,
+            ServeCommand::class,
         ]);
     }
 }
