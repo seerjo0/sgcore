@@ -118,4 +118,35 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Versão do sgcore
+    |--------------------------------------------------------------------------
+    |
+    | Fonte única da versão em execução, comparada com o último Release do
+    | GitHub para o aviso de atualização. Sobrescreva por ambiente com
+    | CMS_VERSION (deixe bater com a tag do release, ex.: 1.2.0).
+    |
+    */
+
+    'version' => env('CMS_VERSION', '1.0.0'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Verificador de atualizações (somente leitura)
+    |--------------------------------------------------------------------------
+    |
+    | Consulta os Releases do GitHub e informa ao admin quando existe versão
+    | nova. Não baixa nem aplica nada — só exibe o aviso. O resultado fica em
+    | cache para não estourar o rate-limit da API anônima do GitHub.
+    |
+    */
+
+    'updater' => [
+        'enabled' => env('CMS_UPDATER_ENABLED', true),
+        'repository' => env('CMS_UPDATER_REPOSITORY', 'seerjo0/sgcore'),
+        'cache_ttl' => (int) env('CMS_UPDATER_CACHE_TTL', 6 * 3600),
+        'timeout' => (int) env('CMS_UPDATER_TIMEOUT', 4),
+    ],
+
 ];

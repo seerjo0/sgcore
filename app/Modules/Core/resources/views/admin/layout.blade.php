@@ -121,6 +121,40 @@
         </header>
 
         <main class="flex-1 p-6">
+            @if (session('status'))
+                <div class="mb-4 rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @can('manage-settings')
+                @if ($update && session('update_dismissed') !== ($update['tag'] ?? null))
+                    <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <span>
+                                <strong>{{ __('updater.banner_title') }}</strong>
+                                {{ __('updater.banner_body', ['latest' => $update['tag'], 'current' => $updateCurrent]) }}
+                            </span>
+                            <span class="flex flex-wrap items-center gap-3">
+                                @if (! empty($update['url']))
+                                    <a href="{{ $update['url'] }}" target="_blank" rel="noopener noreferrer"
+                                       class="font-semibold text-amber-900 underline">{{ __('updater.view_release') }}</a>
+                                @endif
+                                <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.verificar') }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="font-semibold text-amber-900 underline">{{ __('updater.check_again') }}</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.descartar') }}" class="inline">
+                                    @csrf
+                                    <input type="hidden" name="tag" value="{{ $update['tag'] }}">
+                                    <button type="submit" class="text-amber-700 hover:text-amber-900">{{ __('updater.dismiss') }}</button>
+                                </form>
+                            </span>
+                        </div>
+                    </div>
+                @endif
+            @endcan
+
             @if (session('success'))
                 <div class="mb-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                     {{ session('success') }}

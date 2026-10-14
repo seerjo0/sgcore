@@ -4,6 +4,7 @@ namespace App\Modules\Core\Providers;
 
 use App\Models\User;
 use App\Modules\Auth\Enums\Role;
+use App\Modules\Core\Console\CheckUpdatesCommand;
 use App\Modules\Core\Console\InstallCommand;
 use App\Modules\Core\Console\ServeCommand;
 use App\Modules\Core\Console\UninstallCommand;
@@ -19,7 +20,9 @@ use App\Modules\Core\Services\ModuleImporter;
 use App\Modules\Core\Services\ModuleManifest;
 use App\Modules\Core\Services\ModuleState;
 use App\Modules\Core\Services\Settings;
+use App\Modules\Core\Services\UpdateChecker;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class CoreServiceProvider extends ServiceProvider
@@ -61,6 +64,19 @@ class CoreServiceProvider extends ServiceProvider
             InstallCommand::class,
             UninstallCommand::class,
             ServeCommand::class,
+            CheckUpdatesCommand::class,
         ]);
+
+        // Site-wide "update available" banner on the admin shell. This only
+        // reads the cached release (no network on every page); the dashboard,
+        // the "check now" action and the scheduled command refresh it.
+        View::composer('core::admin.layout', function (\Illuminate\View\View $view): void {
+            $updater = app(UpdateChecker::class);
+
+            $view->with([
+                'update' => $updater->updateAvailable(mayFetch: false),
+                'updateCurrent' => $updater->currentVersion(),
+            ]);
+        });
     }
 }

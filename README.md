@@ -159,6 +159,10 @@ During installation, you can opt to create sample pages and a menu to get starte
 
 The admin interface ships in Brazilian Portuguese (pt-BR) and English (en-US). The language is chosen during installation and can be switched at any time from **Settings → Language**, which updates the panel, the login, and the public site on the next request.
 
+### Staying up to date
+
+sgcore checks the project's GitHub Releases and shows an admin-only "Update available" banner with a link to the release notes when a newer version is published. This is intentionally **read-only**: it never downloads or applies anything. You decide, then update through your normal deploy step (e.g. `git pull` + `composer install` + `php artisan migrate`). The running version comes from `config('cms.version')` (override with `CMS_VERSION`); the check is cached to respect GitHub's rate limit and can be refreshed from the banner or via `php artisan sgcore:check-updates` (also run daily by the scheduler). Disable it with `CMS_UPDATER_ENABLED=false`.
+
 ## Requirements
 
 You'll need the following:
