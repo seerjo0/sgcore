@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "seerjo0/sgcore",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "sgcore — CMS modular e self-hosted construído com Laravel (estilo WordPress): páginas, menus, mídia, galerias, temas, construtor visual e blog.",
+    "keywords": ["cms", "laravel", "sgcore", "self-hosted", "modular"],
     "license": "MIT",
     "require": {
         "php": "^8.3",

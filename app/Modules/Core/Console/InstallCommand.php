@@ -23,6 +23,7 @@ class InstallCommand extends Command
         {--admin-email= : E-mail do administrador}
         {--admin-password= : Senha do administrador}
         {--sample : Criar conteúdo de exemplo (páginas e menu)}
+        {--dev : Grava APP_ENV=local e APP_DEBUG=true (desenvolvimento local)}
         {--lang= : Idioma do site (pt_BR ou en)}';
 
     protected $description = 'Instala o sgcore: banco, migrations, admin e lock (equivalente CLI do assistente web)';
@@ -56,10 +57,13 @@ class InstallCommand extends Command
         }
 
         $locale = $this->resolveLocale();
+        $isDev = (bool) $this->option('dev');
 
         try {
             $env->write([
                 'APP_NAME' => 'sgcore',
+                'APP_ENV' => $isDev ? 'local' : 'production',
+                'APP_DEBUG' => $isDev ? 'true' : 'false',
                 'APP_LOCALE' => $locale,
                 'APP_FALLBACK_LOCALE' => $locale,
                 'DB_CONNECTION' => 'mysql',

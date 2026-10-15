@@ -71,6 +71,8 @@ class DatabaseController extends Controller
         try {
             $this->env->write([
                 'APP_NAME' => 'sgcore',
+                'APP_ENV' => (string) config('app.env'),
+                'APP_DEBUG' => config('app.debug') ? 'true' : 'false',
                 'DB_CONNECTION' => 'mysql',
                 'DB_HOST' => (string) $request->input('host'),
                 'DB_PORT' => (string) $request->input('port'),
