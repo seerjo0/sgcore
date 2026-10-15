@@ -20,14 +20,21 @@ class CheckUpdatesCommand extends Command
         }
 
         $update = $updater->updateAvailable(mayFetch: true);
+        $current = $updater->currentVersion();
 
-        if ($update === null) {
-            $this->info('sgcore '.$updater->currentVersion().' está atualizado.');
+        if ($update !== null) {
+            $this->components->warn("Nova versão disponível: {$update['tag']} (atual {$current}).");
 
             return self::SUCCESS;
         }
 
-        $this->components->warn("Nova versão disponível: {$update['tag']} (atual {$updater->currentVersion()}).");
+        if ($updater->latest() === null && ($error = $updater->lastError()) !== null) {
+            $this->components->error("Não foi possível consultar o GitHub: {$error}");
+
+            return self::FAILURE;
+        }
+
+        $this->info("sgcore {$current} está atualizado.");
 
         return self::SUCCESS;
     }

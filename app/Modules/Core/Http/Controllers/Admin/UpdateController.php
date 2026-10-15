@@ -23,11 +23,15 @@ class UpdateController extends Controller
 
         $update = $checker->updateAvailable(mayFetch: true);
 
-        if ($update === null) {
-            return back()->with('status', __('updater.up_to_date', ['version' => $checker->currentVersion()]));
+        if ($update !== null) {
+            return back()->with('status', __('updater.available', ['version' => $update['tag']]));
         }
 
-        return back()->with('status', __('updater.available', ['version' => $update['tag']]));
+        if ($checker->latest() === null && ($error = $checker->lastError()) !== null) {
+            return back()->with('error', __('updater.check_failed', ['message' => $error]));
+        }
+
+        return back()->with('status', __('updater.up_to_date', ['version' => $checker->currentVersion()]));
     }
 
     /**

@@ -20,6 +20,16 @@ class UpdateChecker
 {
     private const CACHE_KEY = 'sgcore.latest_release';
 
+    private ?string $lastError = null;
+
+    /**
+     * Reason the last fetch failed (network/SSL/HTTP status), if any.
+     */
+    public function lastError(): ?string
+    {
+        return $this->lastError;
+    }
+
     /**
      * The newest release/tag known, or null when none/newer unavailable.
      *
@@ -90,6 +100,8 @@ class UpdateChecker
      */
     private function fetch(): ?array
     {
+        $this->lastError = null;
+
         $repo = trim((string) config('cms.updater.repository'));
 
         if (! self::isRepository($repo)) {
@@ -192,11 +204,17 @@ class UpdateChecker
             ])
                 ->timeout(max(1, (int) config('cms.updater.timeout')))
                 ->get($url);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $this->lastError = $e->getMessage();
+
             return null;
         }
 
         if (! $response->successful()) {
+            if ($response->status() !== 404) {
+                $this->lastError = 'HTTP '.$response->status();
+            }
+
             return null;
         }
 
