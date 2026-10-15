@@ -7,20 +7,21 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * Read-only "is there a newer release?" checker against GitHub.
+ * "Is there a newer version?" checker against GitHub.
  *
- * It never downloads, writes or applies anything: it fetches the latest
- * Release metadata, caches it (to respect GitHub's anonymous rate limit) and
- * compares the tag with the running version. Callers get either null (no newer
- * release / disabled / unreachable) or the release summary with an
- * already-validated, github.com-only URL safe to render as a link.
+ * Read-only by itself: it fetches the latest Release (falling back to the
+ * newest Git tag when the repository has no Releases yet), caches the outcome
+ * to respect GitHub's anonymous rate limit, and compares it with the running
+ * version. Callers get either null (nothing newer / disabled / unreachable) or
+ * a summary whose URL is guaranteed to be a github.com URL for our repository.
+ * Applying updates lives in UpdateRunner, which is gated separately.
  */
 class UpdateChecker
 {
     private const CACHE_KEY = 'sgcore.latest_release';
 
     /**
-     * The release summary currently known, or null when none/newer unavailable.
+     * The newest release/tag known, or null when none/newer unavailable.
      *
      * @return array{tag:string,version:string,name:string,url:string,published_at:string,body:string}|null
      */
@@ -57,9 +58,7 @@ class UpdateChecker
     }
 
     /**
-     * Latest release from cache, fetching from GitHub when missing. Fail-soft.
-     *
-     * @return array<string,string>|null
+     * @return array{tag:string,version:string,name:string,url:string,published_at:string,body:string}|null
      */
     public function latest(bool $force = false): ?array
     {
@@ -74,33 +73,44 @@ class UpdateChecker
         return is_array($result) ? $result : null;
     }
 
+    public static function normalizeVersion(string $tag): string
+    {
+        $version = ltrim(trim($tag), 'vV');
+
+        return preg_match('/^\d+(\.\d+)*(?:[-+].*)?$/', $version) === 1 ? $version : $tag;
+    }
+
+    public static function isRepository(string $repo): bool
+    {
+        return preg_match('#^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$#', $repo) === 1;
+    }
+
     /**
-     * @return array<string,string>|null
+     * @return array{tag:string,version:string,name:string,url:string,published_at:string,body:string}|null
      */
     private function fetch(): ?array
     {
         $repo = trim((string) config('cms.updater.repository'));
 
-        if (! $this->isRepository($repo)) {
+        if (! self::isRepository($repo)) {
             return null;
         }
 
-        try {
-            $response = Http::withHeaders([
-                'User-Agent' => 'sgcore-updater',
-                'Accept' => 'application/vnd.github+json',
-            ])
-                ->timeout(max(1, (int) config('cms.updater.timeout')))
-                ->get("https://api.github.com/repos/{$repo}/releases/latest");
-        } catch (Throwable) {
-            return null;
+        $source = (string) config('cms.updater.source', 'auto');
+
+        if ($source === 'tags') {
+            return $this->fromTags($repo);
         }
 
-        if (! $response->successful()) {
-            return null;
-        }
+        return $this->fromReleases($repo) ?? $this->fromTags($repo);
+    }
 
-        $json = $response->json();
+    /**
+     * @return array<string,string>|null
+     */
+    private function fromReleases(string $repo): ?array
+    {
+        $json = $this->get("https://api.github.com/repos/{$repo}/releases/latest");
 
         if (! is_array($json)) {
             return null;
@@ -114,7 +124,7 @@ class UpdateChecker
 
         return [
             'tag' => $tag,
-            'version' => $this->normalizeVersion($tag),
+            'version' => self::normalizeVersion($tag),
             'name' => trim((string) ($json['name'] ?? '')) !== '' ? (string) $json['name'] : $tag,
             'url' => $this->safeReleaseUrl((string) ($json['html_url'] ?? ''), $repo),
             'published_at' => (string) ($json['published_at'] ?? ''),
@@ -123,15 +133,88 @@ class UpdateChecker
     }
 
     /**
-     * Only accept a release URL that is a github.com URL for our repository;
-     * anything else (empty, another host, javascript:) yields no link.
+     * Pick the newest semver from the repository's Git tags and build a safe
+     * tag URL ourselves (so activation is just `git tag` + `git push`).
+     *
+     * @return array<string,string>|null
+     */
+    private function fromTags(string $repo): ?array
+    {
+        $json = $this->get("https://api.github.com/repos/{$repo}/tags?per_page=100");
+
+        if (! is_array($json)) {
+            return null;
+        }
+
+        $best = null;
+
+        foreach ($json as $item) {
+            $tag = trim((string) (is_array($item) ? ($item['name'] ?? '') : ''));
+
+            if ($tag === '') {
+                continue;
+            }
+
+            $version = self::normalizeVersion($tag);
+
+            if (preg_match('/^\d+(\.\d+)*(?:[-+].*)?$/', $version) !== 1) {
+                continue;
+            }
+
+            if ($best === null || version_compare($version, $best['version'], '>')) {
+                $best = ['tag' => $tag, 'version' => $version];
+            }
+        }
+
+        if ($best === null) {
+            return null;
+        }
+
+        return [
+            'tag' => $best['tag'],
+            'version' => $best['version'],
+            'name' => $best['tag'],
+            'url' => 'https://github.com/'.$repo.'/releases/tag/'.$best['tag'],
+            'published_at' => '',
+            'body' => '',
+        ];
+    }
+
+    /**
+     * @return array<int|string,mixed>|null
+     */
+    private function get(string $url): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'sgcore-updater',
+                'Accept' => 'application/vnd.github+json',
+            ])
+                ->timeout(max(1, (int) config('cms.updater.timeout')))
+                ->get($url);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $json = $response->json();
+
+        return is_array($json) ? $json : null;
+    }
+
+    /**
+     * Only accept a github.com URL for our repository's releases; anything else
+     * (empty, another host, javascript:) yields no link.
      */
     private function safeReleaseUrl(string $url, string $repo): string
     {
         $host = parse_url($url, PHP_URL_HOST);
         $path = parse_url($url, PHP_URL_PATH);
 
-        if (is_string($url) && $url !== ''
+        if ($url !== ''
             && strcasecmp((string) $host, 'github.com') === 0
             && is_string($path)
             && str_starts_with($path, '/'.$repo.'/releases')) {
@@ -139,17 +222,5 @@ class UpdateChecker
         }
 
         return '';
-    }
-
-    private function isRepository(string $repo): bool
-    {
-        return preg_match('#^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$#', $repo) === 1;
-    }
-
-    private function normalizeVersion(string $tag): string
-    {
-        $version = ltrim(trim($tag), 'vV');
-
-        return preg_match('/^\d+(\.\d+)*(?:[-+].*)?$/', $version) === 1 ? $version : $tag;
     }
 }

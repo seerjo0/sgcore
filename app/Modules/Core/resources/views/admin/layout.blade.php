@@ -144,6 +144,10 @@
                                     @csrf
                                     <button type="submit" class="font-semibold text-amber-900 underline">{{ __('updater.check_again') }}</button>
                                 </form>
+                                @if (config('cms.updater.apply.enabled'))
+                                    <button type="button" onclick="document.getElementById('pb-apply-form').classList.toggle('hidden'); this.closest('.flex-wrap').classList.add('hidden');"
+                                            class="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-500">{{ __('updater.apply_open') }}</button>
+                                @endif
                                 <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.descartar') }}" class="inline">
                                     @csrf
                                     <input type="hidden" name="tag" value="{{ $update['tag'] }}">
@@ -151,9 +155,36 @@
                                 </form>
                             </span>
                         </div>
+                        @if (config('cms.updater.apply.enabled'))
+                            <form id="pb-apply-form" method="POST"
+                                  action="{{ route('admin.configuracoes.atualizacoes.aplicar') }}"
+                                  class="mt-3 hidden rounded-md border border-emerald-300 bg-white p-3">
+                                @csrf
+                                <p class="mb-2 text-xs text-slate-600">{{ __('updater.apply_warning') }}</p>
+                                <label class="block text-xs font-medium text-slate-700">
+                                    {{ __('updater.apply_confirm_label', ['version' => $update['tag']]) }}
+                                    <input type="text" name="confirm" required pattern="{{ preg_quote($update['tag'], '/') }}"
+                                           title="{{ $update['tag'] }}"
+                                           class="mt-1 w-full rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                </label>
+                                <div class="mt-2 flex gap-2">
+                                    <button type="submit" class="rounded bg-emerald-600 px-3 py-1 text-sm font-semibold text-white hover:bg-emerald-500">
+                                        {{ __('updater.apply_confirm_submit') }}
+                                    </button>
+                                    <button type="button" onclick="document.getElementById('pb-apply-form').classList.add('hidden')"
+                                            class="text-sm text-slate-500 hover:text-slate-700">{{ __('common.cancel') }}</button>
+                                </div>
+                            </form>
+                        @endif
                     </div>
                 @endif
             @endcan
+
+            @if (session('error'))
+                <div class="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             @if (session('success'))
                 <div class="mb-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">

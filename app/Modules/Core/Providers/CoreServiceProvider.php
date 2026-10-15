@@ -8,6 +8,7 @@ use App\Modules\Core\Console\CheckUpdatesCommand;
 use App\Modules\Core\Console\InstallCommand;
 use App\Modules\Core\Console\ServeCommand;
 use App\Modules\Core\Console\UninstallCommand;
+use App\Modules\Core\Console\UpdateCommand;
 use App\Modules\Core\InstallSteps\DefaultSettingsStep;
 use App\Modules\Core\Services\DatabaseSetup;
 use App\Modules\Core\Services\DevServerManager;
@@ -65,6 +66,7 @@ class CoreServiceProvider extends ServiceProvider
             UninstallCommand::class,
             ServeCommand::class,
             CheckUpdatesCommand::class,
+            UpdateCommand::class,
         ]);
 
         // Site-wide "update available" banner on the admin shell. This only

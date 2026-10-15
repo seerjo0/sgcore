@@ -169,4 +169,69 @@ class UpdateCheckerTest extends TestCase
             ->assertOk()
             ->assertDontSee(__('updater.banner_title'));
     }
+
+    public function test_falls_back_to_git_tags_when_no_release_exists(): void
+    {
+        config(['cms.updater.source' => 'auto']);
+
+        Http::fake([
+            'api.github.com/repos/*/releases/latest' => Http::response(null, 404),
+            'api.github.com/repos/*/tags*' => Http::response([
+                ['name' => 'v1.0.0'],
+                ['name' => 'v1.11.0'],
+                ['name' => 'v1.2.0'],
+            ], 200),
+        ]);
+
+        $update = app(UpdateChecker::class)->updateAvailable();
+
+        $this->assertNotNull($update);
+        $this->assertSame('v1.11.0', $update['tag']);
+        $this->assertSame('1.11.0', $update['version']);
+        $this->assertStringContainsString('/releases/tag/v1.11.0', $update['url']);
+    }
+
+    public function test_source_tags_uses_tags_endpoint_directly(): void
+    {
+        config(['cms.updater.source' => 'tags']);
+
+        Http::fake([
+            'api.github.com/repos/*/tags*' => Http::response([['name' => 'v9.9.9']], 200),
+        ]);
+
+        $this->assertSame('v9.9.9', app(UpdateChecker::class)->updateAvailable()['tag']);
+    }
+
+    public function test_apply_route_is_rejected_when_flag_disabled(): void
+    {
+        config(['cms.updater.apply.enabled' => false]);
+        $this->fakeRelease();
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.configuracoes.atualizacoes.aplicar'), ['confirm' => 'v1.2.0'])
+            ->assertSessionHas('error');
+    }
+
+    public function test_apply_requires_typed_confirmation_to_match_the_tag(): void
+    {
+        config(['cms.updater.apply.enabled' => true]);
+        $this->fakeRelease();
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.configuracoes.atualizacoes.aplicar'), ['confirm' => 'wrong'])
+            ->assertSessionHas('error');
+    }
+
+    public function test_apply_route_is_admin_only(): void
+    {
+        $editor = User::factory()->editor()->create();
+
+        $this->actingAs($editor)
+            ->post(route('admin.configuracoes.atualizacoes.aplicar'), ['confirm' => 'v1.2.0'])
+            ->assertForbidden();
+    }
 }

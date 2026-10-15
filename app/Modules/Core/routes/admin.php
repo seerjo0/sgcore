@@ -29,5 +29,9 @@ Route::middleware('can:manage-settings')->group(function (): void {
 
         Route::post('/atualizacoes/descartar', [UpdateController::class, 'dismiss'])
             ->name('atualizacoes.descartar');
+
+        Route::post('/atualizacoes/aplicar', [UpdateController::class, 'apply'])
+            ->middleware('throttle:2,15')
+            ->name('atualizacoes.aplicar');
     });
 });

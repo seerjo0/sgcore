@@ -3,9 +3,11 @@
 namespace App\Modules\Core\Http\Controllers\Admin;
 
 use App\Modules\Core\Services\UpdateChecker;
+use App\Modules\Core\Services\UpdateRunner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use RuntimeException;
 
 class UpdateController extends Controller
 {
@@ -38,5 +40,49 @@ class UpdateController extends Controller
         session(['update_dismissed' => (string) $request->input('tag')]);
 
         return back();
+    }
+
+    /**
+     * "One-click" apply, behind explicit opt-in + typed confirmation. Runs the
+     * same flow as `php artisan sgcore:update` (maintenance + backup + git
+     * checkout + composer + migrate, with rollback on failure).
+     */
+    public function apply(Request $request, UpdateChecker $checker, UpdateRunner $runner): RedirectResponse
+    {
+        $data = $request->validate([
+            'confirm' => ['required', 'string'],
+        ]);
+
+        if (! config('cms.updater.apply.enabled')) {
+            return back()->with('error', __('updater.apply_disabled'));
+        }
+
+        $update = $checker->updateAvailable(mayFetch: true);
+
+        if ($update === null) {
+            return back()->with('status', __('updater.up_to_date', ['version' => $checker->currentVersion()]));
+        }
+
+        if ((string) $data['confirm'] !== $update['tag']) {
+            return back()->with('error', __('updater.confirm_mismatch'));
+        }
+
+        $blockers = $runner->blockers();
+
+        if ($blockers !== []) {
+            return back()->with('error', __('updater.blocked', ['reasons' => implode(' · ', $blockers)]));
+        }
+
+        @set_time_limit(0);
+
+        try {
+            $runner->apply($update['tag']);
+        } catch (RuntimeException $e) {
+            report($e);
+
+            return back()->with('error', __('updater.apply_failed', ['message' => $e->getMessage()]));
+        }
+
+        return back()->with('success', __('updater.applied', ['version' => $update['tag']]));
     }
 }

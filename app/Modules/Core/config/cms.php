@@ -137,16 +137,30 @@ return [
     |--------------------------------------------------------------------------
     |
     | Consulta os Releases do GitHub e informa ao admin quando existe versão
-    | nova. Não baixa nem aplica nada — só exibe o aviso. O resultado fica em
-    | cache para não estourar o rate-limit da API anônima do GitHub.
+    | nova. Por padrão é somente leitura: exibe o aviso mas não aplica nada.
+    | "source" aceita releases|tags|auto (auto = tenta Release e, se não houver,
+    | usa a maior tag Git). A aplicação ("one click") só é possível quando
+    | apply.enabled=true E o app é um clone Git com árvore limpa; desligado por
+    | padrão por segurança. O resultado fica em cache para não estourar o
+    | rate-limit da API anônima do GitHub.
     |
     */
 
     'updater' => [
         'enabled' => env('CMS_UPDATER_ENABLED', true),
         'repository' => env('CMS_UPDATER_REPOSITORY', 'seerjo0/sgcore'),
+        'source' => env('CMS_UPDATER_SOURCE', 'auto'),
         'cache_ttl' => (int) env('CMS_UPDATER_CACHE_TTL', 6 * 3600),
         'timeout' => (int) env('CMS_UPDATER_TIMEOUT', 4),
+
+        'apply' => [
+            // Desligado por padrão. Habilite apenas em installs Git onde você
+            // aceita trocar código + composer + migrate a partir do painel.
+            'enabled' => env('CMS_UPDATER_ALLOW_APPLY', false),
+            'git' => env('CMS_UPDATER_GIT', 'git'),
+            'composer' => env('CMS_UPDATER_COMPOSER', 'composer'),
+            'remote' => env('CMS_UPDATER_REMOTE', 'origin'),
+        ],
     ],
 
 ];
