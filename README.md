@@ -161,7 +161,13 @@ The admin interface ships in Brazilian Portuguese (pt-BR) and English (en-US). T
 
 ### Staying up to date
 
-sgcore checks the project's GitHub Releases and shows an admin-only "Update available" banner with a link to the release notes when a newer version is published. This is intentionally **read-only**: it never downloads or applies anything. You decide, then update through your normal deploy step (e.g. `git pull` + `composer install` + `php artisan migrate`). The running version comes from `config('cms.version')` (override with `CMS_VERSION`); the check is cached to respect GitHub's rate limit and can be refreshed from the banner or via `php artisan sgcore:check-updates` (also run daily by the scheduler). Disable it with `CMS_UPDATER_ENABLED=false`.
+sgcore checks the project's GitHub Releases and shows an admin-only "Update available" banner with a link to the release notes when a newer version is published. The check is **read-only by default**: it never downloads or applies anything, and you update through your normal deploy step.
+
+If (and only if) your install is a **git clone on a host you control** (VPS with `git`/`composer` on `PATH` and write access to the app), you can enable an opt-in **one-click updater**: set `CMS_UPDATER_ALLOW_APPLY=true`. This adds an "Apply update" button that enters maintenance mode, backs up the database (when a dump tool is available), does `git fetch` + `git checkout <tag>` + `composer install --no-dev` + `php artisan migrate --force`, and rolls back to the previous commit if anything fails. The button is admin-only, throttled, and requires **typing the exact target version** to confirm — never enable it on shared hosting.
+
+To **activate the release channel**, publish a tag: `git tag -a v1.0.0 -m "sgcore v1.0.0" && git push origin v1.0.0`. The checker reads the newest semver tag automatically (it doesn't require a GitHub Release). The running version comes from `config('cms.version')` (override with `CMS_VERSION`); the check is cached to respect GitHub's rate limit and can be refreshed from the banner or via `php artisan sgcore:check-updates` (also run daily by the scheduler). Disable it with `CMS_UPDATER_ENABLED=false`.
+
+You can also apply updates from the command line without the button: `php artisan sgcore:update --dry-run` shows the plan (incoming commits + steps), and `php artisan sgcore:update` runs it after a confirmation.
 
 ## Requirements
 
