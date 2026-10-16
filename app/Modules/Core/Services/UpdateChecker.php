@@ -141,7 +141,101 @@ class UpdateChecker
             'url' => $this->safeReleaseUrl((string) ($json['html_url'] ?? ''), $repo),
             'published_at' => (string) ($json['published_at'] ?? ''),
             'body' => (string) ($json['body'] ?? ''),
+            'assets' => $this->normalizeAssets(is_array($json['assets'] ?? null) ? $json['assets'] : [], $repo),
         ];
+    }
+
+    /**
+     * The .zip package asset of a release (name ends with .zip, hosted on a
+     * github asset CDN), with its size and sha256 digest when GitHub provides
+     * them. Null when the release has no downloadable package.
+     *
+     * @param  array<string,mixed>|null  $release
+     * @return array{name:string,url:string,size:int,digest:string}|null
+     */
+    public function packageAsset(?array $release): ?array
+    {
+        if ($release === null) {
+            return null;
+        }
+
+        foreach ((array) ($release['assets'] ?? []) as $asset) {
+            if (! is_array($asset)) {
+                continue;
+            }
+
+            // Assets may arrive normalized (keys url/digest-hex) or raw (browser_download_url/sha256:hex).
+            $url = (string) ($asset['url'] ?? $asset['browser_download_url'] ?? '');
+            $name = (string) ($asset['name'] ?? '');
+            $host = parse_url($url, PHP_URL_HOST);
+
+            if ($url !== ''
+                && str_ends_with(strtolower($name), '.zip')
+                && is_string($host)
+                && (strcasecmp($host, 'github.com') === 0 || str_ends_with(strtolower($host), 'githubusercontent.com'))) {
+                return [
+                    'name' => $name,
+                    'url' => $url,
+                    'size' => (int) ($asset['size'] ?? 0),
+                    'digest' => self::extractDigestHex((string) ($asset['digest'] ?? '')),
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Accepts either a bare sha256 hex or GitHub's "sha256:<hex>" form; returns
+     * lowercase hex, or empty string when it is not a valid 64-char hex digest.
+     */
+    private static function extractDigestHex(string $digest): string
+    {
+        $hex = strtolower(trim($digest));
+        $hex = str_starts_with($hex, 'sha256:') ? substr($hex, 7) : $hex;
+
+        return preg_match('/^[0-9a-f]{64}$/', $hex) === 1 ? $hex : '';
+    }
+
+    /**
+     * @param  array<int,mixed>  $assets
+     * @return list<array{name:string,url:string,size:int,digest:string}>
+     */
+    private function normalizeAssets(array $assets, string $repo): array
+    {
+        $out = [];
+
+        foreach ($assets as $asset) {
+            if (! is_array($asset)) {
+                continue;
+            }
+
+            $url = (string) ($asset['browser_download_url'] ?? '');
+            $host = parse_url($url, PHP_URL_HOST);
+
+            if ($url === '' || ! is_string($host)
+                || ! (strcasecmp($host, 'github.com') === 0 || str_ends_with(strtolower($host), 'githubusercontent.com'))) {
+                continue;
+            }
+
+            $out[] = [
+                'name' => (string) ($asset['name'] ?? ''),
+                'url' => $url,
+                'size' => (int) ($asset['size'] ?? 0),
+                'digest' => $this->normalizeDigest((string) ($asset['digest'] ?? '')),
+            ];
+        }
+
+        return $out;
+    }
+
+    /** GitHub ships "sha256:<hex>"; keep only the hex, empty when absent/invalid. */
+    private function normalizeDigest(string $digest): string
+    {
+        $hex = strtolower(ltrim($digest, ' '));
+        $hex = str_starts_with($hex, 'sha256:') ? substr($hex, 7) : '';
+
+        return preg_match('/^[0-9a-f]{64}$/', $hex) === 1 ? $hex : '';
     }
 
     /**
@@ -189,6 +283,7 @@ class UpdateChecker
             'url' => 'https://github.com/'.$repo.'/releases/tag/'.$best['tag'],
             'published_at' => '',
             'body' => '',
+            'assets' => [],
         ];
     }
 

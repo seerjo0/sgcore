@@ -33,5 +33,13 @@ Route::middleware('can:manage-settings')->group(function (): void {
         Route::post('/atualizacoes/aplicar', [UpdateController::class, 'apply'])
             ->middleware('throttle:2,15')
             ->name('atualizacoes.aplicar');
+
+        Route::post('/atualizacoes/pacote', [UpdateController::class, 'applyPackage'])
+            ->middleware('throttle:2,15')
+            ->name('atualizacoes.pacote');
+
+        Route::post('/atualizacoes/baixar', [UpdateController::class, 'downloadPackage'])
+            ->middleware('throttle:2,15')
+            ->name('atualizacoes.baixar');
     });
 });

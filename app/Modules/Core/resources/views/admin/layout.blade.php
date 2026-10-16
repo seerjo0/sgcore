@@ -156,25 +156,93 @@
                             </span>
                         </div>
                         @if (config('cms.updater.apply.enabled'))
-                            <form id="pb-apply-form" method="POST"
+                            <form id="pb-apply-form" method="POST" enctype="multipart/form-data"
                                   action="{{ route('admin.configuracoes.atualizacoes.aplicar') }}"
                                   class="mt-3 hidden rounded-md border border-emerald-300 bg-white p-3">
                                 @csrf
                                 <p class="mb-2 text-xs text-slate-600">{{ __('updater.apply_warning') }}</p>
-                                <label class="block text-xs font-medium text-slate-700">
-                                    {{ __('updater.apply_confirm_label', ['version' => $update['tag']]) }}
-                                    <input type="text" name="confirm" required pattern="{{ preg_quote($update['tag'], '/') }}"
-                                           title="{{ $update['tag'] }}"
-                                           class="mt-1 w-full rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                                </label>
-                                <div class="mt-2 flex gap-2">
-                                    <button type="submit" class="rounded bg-emerald-600 px-3 py-1 text-sm font-semibold text-white hover:bg-emerald-500">
+
+                                <fieldset class="mb-3">
+                                    <legend class="text-xs font-medium text-slate-700">{{ __('updater.method') }}</legend>
+                                    <label class="mr-4 inline-flex items-center gap-2 text-sm">
+                                        <input type="radio" name="method" value="git" data-form="git"
+                                               @checked(! config('cms.updater.apply.package'))>
+                                        {{ __('updater.method_git') }}
+                                    </label>
+                                    @if (config('cms.updater.apply.package'))
+                                        <label class="inline-flex items-center gap-2 text-sm">
+                                            <input type="radio" name="method" value="package" data-form="package"
+                                                   @checked(config('cms.updater.apply.package'))>
+                                            {{ __('updater.method_package') }}
+                                        </label>
+                                    @endif
+                                </fieldset>
+
+                                {{-- Git: type the exact version --}}
+                                <div data-panel="git" class="rounded border border-slate-200 p-3">
+                                    <label class="block text-xs font-medium text-slate-700">
+                                        {{ __('updater.apply_confirm_label', ['version' => $update['tag']]) }}
+                                        <input type="text" name="confirm" pattern="{{ preg_quote($update['tag'], '/') }}"
+                                               title="{{ $update['tag'] }}"
+                                               class="mt-1 w-full rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                    </label>
+                                    <button type="submit" formaction="{{ route('admin.configuracoes.atualizacoes.aplicar') }}"
+                                            class="mt-2 rounded bg-emerald-600 px-3 py-1 text-sm font-semibold text-white hover:bg-emerald-500">
                                         {{ __('updater.apply_confirm_submit') }}
                                     </button>
+                                </div>
+
+                                @if (config('cms.updater.apply.package'))
+                                    {{-- Package .zip: upload a file --}}
+                                    <div data-panel="package" class="hidden mt-3 rounded border border-slate-200 p-3">
+                                        <label class="block text-xs font-medium text-slate-700">
+                                            {{ __('updater.method_package') }}
+                                            <input type="file" name="package" accept=".zip,application/zip"
+                                                   class="mt-1 block w-full text-sm text-slate-600">
+                                        </label>
+                                        <label class="mt-2 block text-xs font-medium text-slate-700">
+                                            {{ __('updater.apply_confirm_label', ['version' => $update['version'] ?? $update['tag']]) }}
+                                            <input type="text" name="confirm"
+                                                   pattern="{{ preg_quote($update['version'] ?? $update['tag'], '/') }}"
+                                                   title="{{ $update['version'] ?? $update['tag'] }}"
+                                                   class="mt-1 w-full rounded border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                        </label>
+                                        <button type="submit" formaction="{{ route('admin.configuracoes.atualizacoes.pacote') }}"
+                                                class="mt-2 rounded bg-emerald-600 px-3 py-1 text-sm font-semibold text-white hover:bg-emerald-500">
+                                            {{ __('updater.package_upload') }}
+                                        </button>
+                                        @if ($updatePackage ?? null)
+                                            <button type="submit" formaction="{{ route('admin.configuracoes.atualizacoes.baixar') }}"
+                                                    class="mt-2 rounded border border-emerald-300 bg-white px-3 py-1 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
+                                                {{ __('updater.package_download') }} ({{ number_format(($updatePackage['size'] ?? 0) / 1048576, 1) }} MB)
+                                            </button>
+                                        @else
+                                            <p class="mt-2 text-xs text-slate-400">{{ __('updater.package_no_asset') }}</p>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <div class="mt-3 flex gap-2">
                                     <button type="button" onclick="document.getElementById('pb-apply-form').classList.add('hidden')"
                                             class="text-sm text-slate-500 hover:text-slate-700">{{ __('common.cancel') }}</button>
                                 </div>
                             </form>
+
+                            <script>
+                                (function () {
+                                    const form = document.getElementById('pb-apply-form');
+                                    if (! form) return;
+                                    form.querySelectorAll('[data-form]').forEach(function (radio) {
+                                        radio.addEventListener('change', function () {
+                                            form.querySelectorAll('[data-panel]').forEach(function (panel) {
+                                                panel.classList.toggle('hidden', panel.dataset.panel !== radio.dataset.form);
+                                            });
+                                        });
+                                    });
+                                    const pick = form.querySelector('[data-form]:checked') || form.querySelector('[data-form]');
+                                    if (pick) pick.dispatchEvent(new Event('change'));
+                                })();
+                            </script>
                         @endif
                     </div>
                 @endif

@@ -154,12 +154,44 @@ return [
         'timeout' => (int) env('CMS_UPDATER_TIMEOUT', 4),
 
         'apply' => [
-            // Desligado por padrão. Habilite apenas em installs Git onde você
-            // aceita trocar código + composer + migrate a partir do painel.
+            // Git one-click (VPS com git+composer no PATH). Desligado por padrão.
             'enabled' => env('CMS_UPDATER_ALLOW_APPLY', false),
             'git' => env('CMS_UPDATER_GIT', 'git'),
             'composer' => env('CMS_UPDATER_COMPOSER', 'composer'),
             'remote' => env('CMS_UPDATER_REMOTE', 'origin'),
+
+            // Pacote WordPress-style: extrai um .zip sobre a instalação e roda
+            // migrate --force. Não precisa de git/composer/node no servidor.
+            'package' => env('CMS_UPDATER_ALLOW_PACKAGE', true),
+            'max_package_bytes' => (int) env('CMS_UPDATER_MAX_PACKAGE_BYTES', 200 * 1024 * 1024),
+
+            // Baixar o asset .zip da Release e aplicar (exige allow_package).
+            'download' => env('CMS_UPDATER_ALLOW_DOWNLOAD', true),
+            'download_timeout' => (int) env('CMS_UPDATER_DOWNLOAD_TIMEOUT', 120),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Empacotador (sgcore:package)
+    |--------------------------------------------------------------------------
+    |
+    | Monta o zip "public_html" (estilo WordPress): app achatado na raiz com
+    | vendor/ e assets já compilados, entry point próprio e um .htaccess/web.config
+    | que bloqueiam as pastas internas. O arquivo de release fica em out_dir.
+    |
+    */
+
+    'packager' => [
+        'name' => 'sgcore',
+        'output_dir' => env('CMS_PACKAGE_OUTPUT_DIR', base_path('dist')),
+        // Caminhos relativos à raiz protegidos no pacote (não vão no zip / não são
+        // sobrescritos na atualização). storage/bootstrap/cache mantêm dados do host.
+        'protected' => [
+            '.env',
+            '.env.local',
+            'storage',
+            'bootstrap/cache',
         ],
     ],
 

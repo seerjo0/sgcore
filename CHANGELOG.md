@@ -4,6 +4,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
+### Adicionado
+- **Atualização por pacote `.zip` (estilo WordPress)** para shared hosting, sem `git`/`composer`/`node` no servidor:
+  - O botão "Aplicar atualização" ganhou seletor de método **Git / Pacote .zip** (upload do `.zip` ou download do asset da Release).
+  - `sgcore:package` gera o `.zip` autocontido a partir do HEAD (vendor + assets de build + front-controller raiz `index.php` + regras `.htaccess`/`web.config` endurecidas + manifesto `sgcore-package.json`), pronto para anexar à Release. Flags: `--version`, `--out`, `--skip-composer`, `--skip-npm`, `--php-min`.
+  - Download do asset `.zip` com validação de host (só `github.com`/`*.githubusercontent.com`), teto de tamanho (`CMS_UPDATER_MAX_PACKAGE_BYTES`) e verificação de digest **sha256** quando a Release o fornece.
+  - Aplicação in-place preservando `.env`, `storage/` e `bootstrap/cache/` (lista `cms.packager.protected`), sob modo de manutenção, com `migrate --force` e `optimize:clear`.
+  - continua opt-in atrás de `CMS_UPDATER_ALLOW_APPLY=true`; sub-flags `CMS_UPDATER_ALLOW_PACKAGE`/`CMS_UPDATER_ALLOW_DOWNLOAD` (default `true` quando apply está ligado) e `CMS_UPDATER_DOWNLOAD_TIMEOUT`.
+  - Serviços `PackageBuilder`/`PackageSource`/`PackageUpdater` + comando `sgcore:package`; suíte sobe para 315 testes, Pint limpo.
+
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).

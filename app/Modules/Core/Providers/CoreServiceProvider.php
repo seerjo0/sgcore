@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Auth\Enums\Role;
 use App\Modules\Core\Console\CheckUpdatesCommand;
 use App\Modules\Core\Console\InstallCommand;
+use App\Modules\Core\Console\PackageCommand;
 use App\Modules\Core\Console\ServeCommand;
 use App\Modules\Core\Console\UninstallCommand;
 use App\Modules\Core\Console\UpdateCommand;
@@ -64,6 +65,7 @@ class CoreServiceProvider extends ServiceProvider
         $this->commands([
             InstallCommand::class,
             UninstallCommand::class,
+            PackageCommand::class,
             ServeCommand::class,
             CheckUpdatesCommand::class,
             UpdateCommand::class,
@@ -74,10 +76,12 @@ class CoreServiceProvider extends ServiceProvider
         // the "check now" action and the scheduled command refresh it.
         View::composer('core::admin.layout', function (\Illuminate\View\View $view): void {
             $updater = app(UpdateChecker::class);
+            $update = $updater->updateAvailable(mayFetch: false);
 
             $view->with([
-                'update' => $updater->updateAvailable(mayFetch: false),
+                'update' => $update,
                 'updateCurrent' => $updater->currentVersion(),
+                'updatePackage' => $updater->packageAsset($update),
             ]);
         });
     }
