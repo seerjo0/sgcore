@@ -8,12 +8,66 @@ import 'grapesjs/dist/css/grapes.min.css';
         return;
     }
 
+    Object.keys(cfg.endpoints ?? {}).forEach((key) => {
+        const endpoint = cfg.endpoints[key];
+
+        if (typeof endpoint !== 'string') {
+            return;
+        }
+
+        const path = endpoint.replace(/^[a-z]+:\/\/[^/]+/i, '');
+
+        cfg.endpoints[key] = path === '' ? '/' : path;
+    });
+
     const S = cfg.strings;
     const B = S.blocks;
     const NATIVE_ATTRS = ['src', 'alt', 'title', 'href', 'width', 'height', 'type', 'name', 'value', 'placeholder'];
 
     const mediaIcon = '<svg viewBox="0 0 24 24" width="34" height="34"><path fill="currentColor" d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
     const blockIcon = '<svg viewBox="0 0 24 24" width="34" height="34"><path fill="currentColor" d="M3 5h18v14H3V5zm2 2v10h14V7H5z"/></svg>';
+
+    const ic = (inner) => '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"'
+        + ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+
+    // One icon per block, keyed by the block id. Layout/content/component glyphs
+    // are line-style so they read clearly at 32px on the drag palette.
+    const BLOCK_ICONS = {
+        // Presets
+        'pb-hero-split': ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><rect x="14" y="8" width="4" height="4" rx="1"/><path d="M6 8h4M6 12h4M6 16h3"/>'),
+        'pb-hero-center': ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M6 13h12M9 17h6"/>'),
+        'pb-features': ic('<rect x="3" y="5" width="7" height="7" rx="1.5"/><rect x="14" y="5" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="5" rx="1.5"/><rect x="14" y="14" width="7" height="5" rx="1.5"/>'),
+        'pb-cta': ic('<path d="M4 10v4l11 4V6z"/><path d="M15 8a3 3 0 0 1 0 8"/><path d="M4 14h3v4"/>'),
+        'pb-testimonial': ic('<path d="M4 5h16v11H9l-4 3v-3H4z"/><path d="M8 9c1-1 2-1 2 0s-1 2 0 2M13 9c1-1 2-1 2 0s-1 2 0 2"/>'),
+        'pb-pricing': ic('<path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9z"/><circle cx="8" cy="8" r="1.3"/>'),
+        'pb-gallery': ic('<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>'),
+        'pb-stats': ic('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+        'pb-team': ic('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.3"/><path d="M16 15c3 0 5 1.6 5 4"/>'),
+        'pb-footer': ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15h18"/><path d="M6 18h6M15 18h3"/>'),
+        // Layout
+        'pb-section': ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>'),
+        'pb-container': ic('<rect x="7" y="4" width="10" height="16" rx="1.5"/><path d="M4 4v16M20 4v16"/>'),
+        'pb-row': ic('<rect x="3" y="6" width="8" height="12" rx="1.5"/><rect x="13" y="6" width="8" height="12" rx="1.5"/>'),
+        'pb-column': ic('<rect x="8" y="4" width="8" height="16" rx="1.5"/>'),
+        'pb-spacer': ic('<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'),
+        'pb-divider': ic('<path d="M4 12h16"/><path d="M7 8h10M7 16h10" opacity=".4"/>'),
+        'pb-banner': ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10h8M8 14h5"/>'),
+        // Content
+        'pb-heading': ic('<path d="M6 5v14M18 5v14M6 12h12"/>'),
+        'pb-text': ic('<path d="M5 7h14M5 11h14M5 15h14M5 19h9"/>'),
+        'pb-image': ic('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l4-4 4 4 3-3 5 5"/>'),
+        'pb-button': ic('<rect x="3" y="9" width="18" height="7" rx="3.5"/><path d="M8 12.5h8"/>'),
+        'pb-list': ic('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="5" cy="18" r="1"/>'),
+        'pb-video': ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>'),
+        'pb-youtube': ic('<rect x="2" y="6" width="20" height="12" rx="3"/><path d="M10 9.5l5 2.5-5 2.5z"/>'),
+        'pb-blockquote': ic('<path d="M9 7H5v5h4c0 3-2 4-4 4M19 7h-4v5h4c0 3-2 4-4 4"/>'),
+        // Components
+        'pb-card': ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M7 13h7M7 16h5"/>'),
+        'pb-alert': ic('<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>'),
+        'pb-badge': ic('<circle cx="12" cy="12" r="8"/><path d="M12 8v4M12 15h.01"/>'),
+        'pb-icon': ic('<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/>'),
+        'pb-html': ic('<path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="M13 6 11 18"/>'),
+    };
 
     const editor = grapesjs.init({
         container: '#pb-editor',
@@ -101,9 +155,12 @@ import 'grapesjs/dist/css/grapes.min.css';
     let saveTimer = null;
     let saveInFlight = false;
     let dirty = false;
+    let previewOverlay = null;
+    let cssOverlay = null;
+    let customCss = cfg.customCss ?? '';
 
     editor.on('load', () => {
-        if (cfg.draft && cfg.draft.components) {
+        if (cfg.draft && (cfg.draft.components || cfg.draft.pages)) {
             editor.loadProjectData(cfg.draft);
         }
 
@@ -140,6 +197,8 @@ import 'grapesjs/dist/css/grapes.min.css';
         setupRevisions();
     }
 
+    setupTools();
+
     async function saveDraft() {
         if (saveInFlight) {
             return;
@@ -167,11 +226,11 @@ import 'grapesjs/dist/css/grapes.min.css';
             } else {
                 setStatus(S.statusUnsaved);
                 const body = await response.json().catch(() => null);
-                toast(body?.errors?.data?.[0] ?? S.statusUnsaved, 'error');
+                toast(httpError(response, body, S.statusUnsaved), 'error');
             }
         } catch (error) {
             setStatus(S.statusUnsaved);
-            toast(S.statusUnsaved, 'error');
+            toast(`${S.networkError ?? S.statusUnsaved} (${cfg.endpoints.autosave})`, 'error');
         } finally {
             saveInFlight = false;
         }
@@ -208,11 +267,142 @@ import 'grapesjs/dist/css/grapes.min.css';
             } else {
                 setStatus(S.statusUnsaved);
                 const body = await response.json().catch(() => null);
-                toast(body?.errors?.html?.[0] ?? body?.errors?.json?.[0] ?? S.publishError, 'error');
+                toast(httpError(response, body, S.publishError), 'error');
             }
         } catch (error) {
             setStatus(S.statusUnsaved);
-            toast(S.publishError, 'error');
+            toast(`${S.networkError ?? S.statusUnsaved} (${cfg.endpoints.publish})`, 'error');
+        }
+    }
+
+    async function postBuilder(url, payload) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            body: JSON.stringify(payload ?? {}),
+        });
+    }
+
+    async function openPreview() {
+        const project = editor.getProjectData();
+        setStatus(S.statusSaving);
+
+        try {
+            const response = await postBuilder(cfg.endpoints.preview, {
+                html: editor.getHtml(),
+                css: editor.getCss(),
+                json: JSON.stringify(project),
+            });
+
+            if (!response.ok) {
+                setStatus(S.statusUnsaved);
+                const body = await response.json().catch(() => null);
+                toast(httpError(response, body, S.publishError), 'error');
+
+                return;
+            }
+
+            const data = await response.json();
+            showPreview(data.html);
+        } catch (error) {
+            setStatus(S.statusUnsaved);
+            toast(`${S.networkError ?? S.statusUnsaved} (${cfg.endpoints.preview})`, 'error');
+        }
+    }
+
+    function showPreview(html) {
+        if (!previewOverlay) {
+            previewOverlay = document.createElement('div');
+            previewOverlay.className = 'pb-preview';
+            previewOverlay.innerHTML = '<div class="pb-preview-bar">'
+                + '<strong>' + escapeHtml(S.previewTitle) + '</strong>'
+                + '<button type="button" class="pb-btn">' + escapeHtml(S.previewClose) + '</button>'
+                + '</div><iframe title="' + escapeHtml(S.previewTitle) + '"></iframe>';
+            previewOverlay.querySelector('button').addEventListener('click', closePreview);
+            document.body.appendChild(previewOverlay);
+        }
+
+        previewOverlay.querySelector('iframe').srcdoc = html;
+    }
+
+    function closePreview() {
+        if (previewOverlay) {
+            previewOverlay.remove();
+            previewOverlay = null;
+        }
+    }
+
+    function openCssModal() {
+        if (cssOverlay) {
+            return;
+        }
+
+        cssOverlay = document.createElement('div');
+        cssOverlay.className = 'pb-modal';
+        cssOverlay.innerHTML = '<div class="pb-css"><header><strong>' + escapeHtml(S.cssTitle) + '</strong>'
+            + '<div class="pb-actions">'
+            + '<button type="button" class="pb-btn pb-btn-primary" data-act="save">' + escapeHtml(S.cssSave) + '</button>'
+            + '<button type="button" class="pb-btn" data-act="close">' + escapeHtml(S.cssClose) + '</button>'
+            + '</div></header><textarea spellcheck="false" placeholder="seletor { propriedade: valor; }"></textarea></div>';
+
+        const textarea = cssOverlay.querySelector('textarea');
+        textarea.value = customCss;
+        cssOverlay.querySelector('[data-act="save"]').addEventListener('click', () => saveCustomCss(textarea));
+        cssOverlay.querySelector('[data-act="close"]').addEventListener('click', closeCssModal);
+        document.body.appendChild(cssOverlay);
+        textarea.focus();
+    }
+
+    async function saveCustomCss(textarea) {
+        try {
+            const response = await postBuilder(cfg.endpoints.css, { css: textarea.value });
+
+            if (!response.ok) {
+                const body = await response.json().catch(() => null);
+                toast(httpError(response, body, S.publishError), 'error');
+
+                return;
+            }
+
+            customCss = textarea.value;
+            toast(S.cssSaved, 'success');
+            closeCssModal();
+        } catch (error) {
+            toast(`${S.networkError ?? S.statusUnsaved} (${cfg.endpoints.css})`, 'error');
+        }
+    }
+
+    function closeCssModal() {
+        if (cssOverlay) {
+            cssOverlay.remove();
+            cssOverlay = null;
+        }
+    }
+
+    async function discardDraft() {
+        if (!window.confirm(S.discardConfirm)) {
+            return;
+        }
+
+        try {
+            const response = await postBuilder(cfg.endpoints.discard, {});
+
+            if (!response.ok) {
+                const body = await response.json().catch(() => null);
+                toast(httpError(response, body, S.publishError), 'error');
+
+                return;
+            }
+
+            dirty = false;
+            toast(S.discardDone, 'success');
+            window.location.reload();
+        } catch (error) {
+            toast(`${S.networkError ?? S.statusUnsaved} (${cfg.endpoints.discard})`, 'error');
         }
     }
 
@@ -285,6 +475,93 @@ import 'grapesjs/dist/css/grapes.min.css';
 
             if (Object.keys(patch).length > 0) {
                 component.addAttributes(patch);
+            }
+        });
+    }
+
+    function duplicateSelected() {
+        const selected = editor.getSelected();
+        const parent = selected && selected.parent();
+
+        if (!parent) {
+            return;
+        }
+
+        const clone = selected.clone();
+        parent.components().add(clone, { at: selected.index() + 1 });
+        editor.select(clone);
+    }
+
+    function setupTools() {
+        const devices = { desktop: 'pb-device-desktop', tablet: 'pb-device-tablet', mobile: 'pb-device-mobile' };
+
+        const markActive = () => {
+            const current = editor.getDevice();
+
+            Object.entries(devices).forEach(([name, id]) => {
+                const btn = document.getElementById(id);
+
+                if (btn) {
+                    btn.classList.toggle('is-active', name === current);
+                }
+            });
+        };
+
+        Object.entries(devices).forEach(([name, id]) => {
+            const btn = document.getElementById(id);
+
+            if (btn) {
+                btn.addEventListener('click', () => editor.setDevice(name));
+            }
+        });
+
+        editor.on('change:device', markActive);
+        markActive();
+
+        const bind = (id, handler) => {
+            const btn = document.getElementById(id);
+
+            if (btn) {
+                btn.addEventListener('click', handler);
+            }
+        };
+
+        bind('pb-undo', () => editor.runCommand('core:undo'));
+        bind('pb-redo', () => editor.runCommand('core:redo'));
+        bind('pb-duplicate', duplicateSelected);
+        bind('pb-delete', () => {
+            const selected = editor.getSelected();
+
+            if (selected) {
+                selected.remove();
+            }
+        });
+        bind('pb-preview', openPreview);
+        bind('pb-discard', discardDraft);
+        bind('pb-css-btn', openCssModal);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                if (previewOverlay) {
+                    closePreview();
+                }
+
+                if (cssOverlay) {
+                    closeCssModal();
+                }
+
+                return;
+            }
+
+            const active = document.activeElement;
+
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+                return;
+            }
+
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+                event.preventDefault();
+                duplicateSelected();
             }
         });
     }
@@ -445,8 +722,164 @@ import 'grapesjs/dist/css/grapes.min.css';
         const categoryLayout = B.categoryLayout;
         const categoryContent = B.categoryContent;
         const categoryComponents = B.categoryComponents;
+        const categoryBlocks = B.categoryBlocks;
 
-        return [
+        const preset = (id, label, content) => ({
+            id: 'pb-' + id,
+            label,
+            category: categoryBlocks,
+            media: blockIcon,
+            content,
+            activate: true,
+            select: true,
+        });
+
+        const esc = escapeHtml;
+
+        const blocks = [
+            preset('hero-split', B.heroSplit, `
+                <section class="pb-section py-5" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <div class="row align-items-center g-4" data-pb-type="row">
+                            <div class="col-lg-6" data-pb-type="column">
+                                <h1 class="pb-heading display-5 fw-bold" data-pb-type="heading" data-pb-level="1">${esc(B.sampleHeroTitle)}</h1>
+                                <p class="pb-text lead text-muted" data-pb-type="text">${esc(B.sampleHeroLead)}</p>
+                                <a class="btn btn-primary btn-lg me-2" data-pb-type="button" data-pb-text="${esc(B.sampleButton)}" href="#">${esc(B.sampleButton)}</a>
+                                <a class="btn btn-outline-secondary btn-lg" data-pb-type="button" data-pb-variant="outline-secondary" data-pb-text="${esc(B.sampleButton)}" href="#">${esc(B.sampleButton)}</a>
+                            </div>
+                            <div class="col-lg-6" data-pb-type="column">
+                                <img class="img-fluid pb-media-image rounded" data-pb-type="image" src="" alt="">
+                            </div>
+                        </div>
+                    </div>
+                </section>`),
+            preset('hero-center', B.heroCenter, `
+                <section class="pb-section text-center py-5 bg-light" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <h1 class="pb-heading display-4 fw-bold" data-pb-type="heading" data-pb-level="1">${esc(B.sampleHeroTitle)}</h1>
+                        <p class="pb-text lead text-muted" data-pb-type="text">${esc(B.sampleHeroLead)}</p>
+                        <a class="btn btn-primary btn-lg" data-pb-type="button" data-pb-text="${esc(B.sampleButton)}" href="#">${esc(B.sampleButton)}</a>
+                    </div>
+                </section>`),
+            preset('features', B.features, `
+                <section class="pb-section py-5" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <h2 class="pb-heading text-center mb-4" data-pb-type="heading" data-pb-level="2">${esc(B.sampleHeading)}</h2>
+                        <div class="row g-4" data-pb-type="row">
+                            ${[
+                                ['star', B.sampleFeatureTitle, B.sampleFeatureText],
+                                ['check', B.sampleFeatureTitle, B.sampleFeatureText],
+                                ['clock', B.sampleFeatureTitle, B.sampleFeatureText],
+                            ].map(([icon, title, text]) => `
+                            <div class="col-md-4" data-pb-type="column">
+                                <span class="pb-icon d-inline-flex pb-text-primary mb-3" data-pb-type="icon" data-pb-icon="${esc(icon)}" data-pb-size="lg" data-pb-variant="primary">*</span>
+                                <h3 class="pb-heading h5" data-pb-type="heading" data-pb-level="3">${esc(title)}</h3>
+                                <p class="pb-text text-muted" data-pb-type="text">${esc(text)}</p>
+                            </div>`).join('')}
+                        </div>
+                    </div>
+                </section>`),
+            preset('cta', B.cta, `
+                <section class="pb-section text-center text-white bg-primary py-5" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <h2 class="pb-heading display-6 fw-bold" data-pb-type="heading" data-pb-level="2">${esc(B.sampleCtaTitle)}</h2>
+                        <p class="pb-text lead mb-4" data-pb-type="text">${esc(B.sampleCtaText)}</p>
+                        <a class="btn btn-light btn-lg" data-pb-type="button" data-pb-variant="light" data-pb-text="${esc(B.sampleButton)}" href="#">${esc(B.sampleButton)}</a>
+                    </div>
+                </section>`),
+            preset('testimonial', B.testimonial, `
+                <section class="pb-section py-5 bg-light" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <div class="row justify-content-center" data-pb-type="row">
+                            <div class="col-lg-8 text-center" data-pb-type="column">
+                                <span class="pb-icon d-inline-flex pb-text-primary mb-3" data-pb-type="icon" data-pb-icon="star" data-pb-size="md" data-pb-variant="primary">*</span>
+                                <figure class="pb-blockquote" data-pb-type="blockquote" data-pb-cite="${esc(B.sampleQuoteCite)}">${esc(B.sampleQuote)}</figure>
+                            </div>
+                        </div>
+                    </div>
+                </section>`),
+            preset('pricing', B.pricing, `
+                <section class="pb-section py-5" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <h2 class="pb-heading text-center mb-4" data-pb-type="heading" data-pb-level="2">${esc(B.sampleHeading)}</h2>
+                        <div class="row g-4" data-pb-type="row">
+                            ${[0, 1, 2].map(() => `
+                            <div class="col-md-4" data-pb-type="column">
+                                <div class="card h-100" data-pb-type="card">
+                                    <div class="card-body">
+                                        <h3 class="pb-heading h5" data-pb-type="heading" data-pb-level="3">${esc(B.samplePricePlan)}</h3>
+                                        <ul class="list-group list-group-flush pb-list" data-pb-type="list" data-pb-items="${esc(B.samplePriceItem)}">
+                                            <li class="list-group-item">${esc(B.samplePriceItem)}</li>
+                                        </ul>
+                                        <a class="btn btn-primary w-100 mt-3" data-pb-type="button" data-pb-text="${esc(B.samplePriceCta)}" href="#">${esc(B.samplePriceCta)}</a>
+                                    </div>
+                                </div>
+                            </div>`).join('')}
+                        </div>
+                    </div>
+                </section>`),
+            preset('gallery', B.gallery, `
+                <section class="pb-section py-5" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <div class="row g-3" data-pb-type="row">
+                            ${[0, 1, 2, 3, 4, 5].map(() => `
+                            <div class="col-6 col-md-4" data-pb-type="column">
+                                <img class="img-fluid pb-media-image rounded" data-pb-type="image" src="" alt="">
+                            </div>`).join('')}
+                        </div>
+                    </div>
+                </section>`),
+            preset('stats', B.stats, `
+                <section class="pb-section py-5 bg-light" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <div class="row text-center g-4" data-pb-type="row">
+                            ${[0, 1, 2].map(() => `
+                            <div class="col-md-4" data-pb-type="column">
+                                <h3 class="pb-heading display-4 fw-bold pb-text-primary" data-pb-type="heading" data-pb-level="3">${esc(B.sampleStatValue)}</h3>
+                                <p class="pb-text text-muted" data-pb-type="text">${esc(B.sampleStatLabel)}</p>
+                            </div>`).join('')}
+                        </div>
+                    </div>
+                </section>`),
+            preset('team', B.team, `
+                <section class="pb-section py-5" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <h2 class="pb-heading text-center mb-4" data-pb-type="heading" data-pb-level="2">${esc(B.sampleHeading)}</h2>
+                        <div class="row g-4" data-pb-type="row">
+                            ${[0, 1, 2].map(() => `
+                            <div class="col-md-4 text-center" data-pb-type="column">
+                                <img class="img-fluid pb-media-image rounded-circle mb-3" data-pb-type="image" src="" alt="">
+                                <h3 class="pb-heading h5 mb-1" data-pb-type="heading" data-pb-level="3">${esc(B.sampleTeamName)}</h3>
+                                <p class="pb-text text-muted" data-pb-type="text">${esc(B.sampleTeamRole)}</p>
+                            </div>`).join('')}
+                        </div>
+                    </div>
+                </section>`),
+            preset('footer', B.footer, `
+                <section class="pb-section py-5 bg-dark text-white" data-pb-type="section">
+                    <div class="container" data-pb-type="container">
+                        <div class="row g-4" data-pb-type="row">
+                            <div class="col-md-5" data-pb-type="column">
+                                <h3 class="pb-heading h5" data-pb-type="heading" data-pb-level="3">{site:name}</h3>
+                                <p class="pb-text text-white-50" data-pb-type="text">${esc(B.sampleFooterAbout)}</p>
+                            </div>
+                            <div class="col-md-3" data-pb-type="column">
+                                <h4 class="pb-heading h6 text-uppercase text-white-50" data-pb-type="heading" data-pb-level="4">${esc(B.sampleFooterLink)}</h4>
+                                <ul class="pb-list list-unstyled" data-pb-type="list" data-pb-variant="unstyled" data-pb-items="${esc(B.sampleFooterLink)}&#10;${esc(B.sampleFooterLink)}&#10;${esc(B.sampleFooterLink)}">
+                                    <li>${esc(B.sampleFooterLink)}</li>
+                                    <li>${esc(B.sampleFooterLink)}</li>
+                                    <li>${esc(B.sampleFooterLink)}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4" data-pb-type="column">
+                                <h4 class="pb-heading h6 text-uppercase text-white-50" data-pb-type="heading" data-pb-level="4">{site:name}</h4>
+                                <p class="pb-text text-white-50 mb-0" data-pb-type="text">${esc(B.sampleFooterAbout)}</p>
+                            </div>
+                        </div>
+                        <hr class="border-secondary my-4">
+                        <p class="pb-text text-white-50 text-center mb-0" data-pb-type="text">${esc(B.sampleFooterCopyright)}</p>
+                    </div>
+                </section>`),
             {
                 id: 'pb-section',
                 label: B.section,
@@ -622,7 +1055,20 @@ import 'grapesjs/dist/css/grapes.min.css';
                 content: '<span class="pb-icon d-inline-flex pb-text-primary" data-pb-type="icon" data-pb-icon="star" data-pb-size="md" data-pb-variant="primary" style="height:1.75rem;width:1.75rem">*</span>',
                 select: true,
             },
+            {
+                id: 'pb-html',
+                label: B.html,
+                category: categoryComponents,
+                media: blockIcon,
+                content: '<div class="pb-html text-muted p-3 border border-dashed rounded" data-pb-type="html" data-pb-code="">&lt;!-- Escreva seu HTML na aba Propriedades --&gt;</div>',
+                select: true,
+            },
         ];
+
+        return blocks.map((block) => ({
+            ...block,
+            media: BLOCK_ICONS[block.id] ?? block.media,
+        }));
     }
 
     function buildDevices() {
@@ -727,6 +1173,17 @@ import 'grapesjs/dist/css/grapes.min.css';
         const meta = document.querySelector('meta[name="csrf-token"]');
 
         return meta ? meta.content : '';
+    }
+
+    function httpError(response, body, fallback) {
+        if (response.status === 401 || response.status === 419) {
+            return `${S.sessionExpired ?? fallback} (HTTP ${response.status})`;
+        }
+
+        const errors = body?.errors;
+        const detail = errors?.data?.[0] ?? errors?.json?.[0] ?? errors?.html?.[0] ?? body?.message;
+
+        return `${detail ?? fallback} (HTTP ${response.status})`;
     }
 
     function escapeHtml(value) {
