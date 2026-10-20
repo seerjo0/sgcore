@@ -43,7 +43,7 @@ class MediaController extends Controller
     /**
      * Store one or more uploaded images.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $maxKb = (int) floor(((int) config('cms.media.max_upload_bytes')) / 1024);
 
@@ -53,23 +53,38 @@ class MediaController extends Controller
         ]);
 
         $userId = $request->user()?->id;
-        $stored = 0;
+        $stored = [];
         $failures = [];
 
         foreach ($request->file('files') as $file) {
             try {
-                $this->mediaStorage->store($file, $userId);
-                $stored++;
+                $stored[] = $this->mediaStorage->store($file, $userId);
             } catch (Throwable $e) {
                 $failures[] = $file->getClientOriginalName().' — '.$e->getMessage();
             }
+        }
+
+        if ($request->expectsJson()) {
+            if ($failures !== []) {
+                return response()->json(['errors' => ['files' => $failures]], 422);
+            }
+
+            return response()->json([
+                'data' => array_map(fn (Medium $medium): array => [
+                    'id' => $medium->id,
+                    'url' => $medium->url(),
+                    'filename' => $medium->filename,
+                    'alt' => $medium->alt,
+                    'caption' => $medium->caption,
+                ], $stored),
+            ]);
         }
 
         if ($failures !== []) {
             return back()->withErrors(['files' => $failures]);
         }
 
-        return back()->with('success', __('media.uploaded', ['count' => $stored]));
+        return back()->with('success', __('media.uploaded', ['count' => count($stored)]));
     }
 
     /**

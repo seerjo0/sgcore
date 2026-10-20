@@ -199,4 +199,20 @@ class MediaUploadTest extends TestCase
             ->assertJsonPath('data.0.filename', 'buscavel.jpg')
             ->assertJsonPath('data.0.url', '/media/'.$medium->path);
     }
+
+    public function test_store_returns_json_when_the_request_expects_it(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.midia.store'), [
+                'files' => [$this->fakeImage('json-upload.jpg')],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['data' => [['id', 'url', 'filename', 'alt', 'caption']]])
+            ->assertJsonPath('data.0.filename', 'json-upload.jpg');
+
+        $this->assertSame('/media/'.Medium::query()->firstOrFail()->path, $response->json('data.0.url'));
+    }
 }
