@@ -244,6 +244,17 @@ final class Components
                 ],
                 defaults: ['icon' => 'star', 'size' => 'md', 'variant' => 'primary'],
             ),
+            new GenericComponent(
+                type: 'html',
+                name: __('pagebuilder.block_html'),
+                group: 'components',
+                view: 'pagebuilder::components.html',
+                props: [
+                    'code' => ['label' => __('pagebuilder.prop_code'), 'type' => 'textarea'],
+                ],
+                rules: ['code' => ['nullable', 'string', 'max:50000']],
+                defaults: ['code' => ''],
+            ),
         ];
     }
 }

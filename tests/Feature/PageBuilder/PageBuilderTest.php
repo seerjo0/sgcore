@@ -65,6 +65,9 @@ class PageBuilderTest extends TestCase
 
         $this->get(route('admin.paginas.builder.index', $page))->assertRedirect(route('login'));
         $this->post(route('admin.paginas.builder.autosave', $page), ['data' => '{}'])->assertRedirect(route('login'));
+        $this->post(route('admin.paginas.builder.preview', $page), ['html' => '<p>x</p>', 'css' => 'p{}', 'json' => '{}'])->assertRedirect(route('login'));
+        $this->post(route('admin.paginas.builder.discard', $page))->assertRedirect(route('login'));
+        $this->post(route('admin.paginas.builder.css', $page), ['css' => '#x{}'])->assertRedirect(route('login'));
         $this->post(route('admin.paginas.builder.publish', $page), $this->publishPayload())->assertRedirect(route('login'));
     }
 
@@ -268,5 +271,137 @@ class PageBuilderTest extends TestCase
 
         $page->refresh();
         $this->assertNull($page->builder_published);
+    }
+
+    public function test_preview_renders_the_document_without_publishing(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage();
+
+        $response = $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.preview', $page), $this->publishPayload());
+
+        $response->assertOk()->assertJsonStructure(['html']);
+
+        $html = $response->json('html');
+        $this->assertStringContainsString('Olá mundo', $html);
+        $this->assertStringContainsString('pb-main', $html);
+
+        // A preview must not persist anything.
+        $page->refresh();
+        $this->assertNull($page->builder_published);
+    }
+
+    public function test_preview_rejects_malformed_project(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.preview', $page), [
+                'html' => '<p>Corpo</p>',
+                'css' => 'p {}',
+                'json' => '{"nope":true}',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('json');
+    }
+
+    public function test_discard_reverts_the_draft_to_the_last_published_version(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage();
+
+        // Publish "Olá mundo", then edit the draft into a different version.
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.publish', $page), $this->publishPayload())
+            ->assertOk();
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.autosave', $page), ['data' => json_encode($this->project('Versão B'))])
+            ->assertOk();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.discard', $page))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $page->refresh();
+        $draft = json_encode($page->builder_draft, JSON_UNESCAPED_UNICODE);
+        $this->assertStringContainsString('Olá mundo', $draft);
+        $this->assertStringNotContainsString('Versão B', $draft);
+    }
+
+    public function test_discard_clears_the_draft_when_never_published(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.autosave', $page), ['data' => json_encode($this->project('Rascunho'))])
+            ->assertOk();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.discard', $page))
+            ->assertOk();
+
+        $page->refresh();
+        $this->assertNull($page->builder_draft);
+    }
+
+    public function test_custom_css_is_stored_and_rendered_on_the_public_page(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.css', $page), ['css' => '#pb-test{color:red}'])
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $page->refresh();
+        $this->assertSame('#pb-test{color:red}', $page->builder_custom_css);
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.publish', $page), $this->publishPayload())
+            ->assertOk();
+
+        $this->get('/pagina')
+            ->assertOk()
+            ->assertSee('#pb-test{color:red}', false);
+    }
+
+    public function test_custom_css_is_sanitized_on_render(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.css', $page), [
+                'css' => '@import url(http://evil/x.css); p{color:red; width: expression(alert(1));}',
+            ])
+            ->assertOk();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.publish', $page), $this->publishPayload())
+            ->assertOk();
+
+        $this->get('/pagina')
+            ->assertOk()
+            ->assertSee('color:red', false)
+            ->assertDontSee('@import', false)
+            ->assertDontSee('expression(', false);
+    }
+
+    public function test_empty_custom_css_clears_the_column(): void
+    {
+        $editor = User::factory()->editor()->create();
+        $page = $this->createPage(['builder_custom_css' => 'p{color:blue}']);
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.css', $page), ['css' => ''])
+            ->assertOk();
+
+        $page->refresh();
+        $this->assertNull($page->builder_custom_css);
     }
 }

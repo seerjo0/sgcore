@@ -53,6 +53,34 @@ class VisualBuilderTest extends TestCase
     }
 
     /**
+     * A page-based GrapesJS project, the shape the editor sends since the page
+     * manager became core (GrapesJS >= 0.21). Components live under the first
+     * page frame's wrapper instead of a flat top-level `components` key.
+     *
+     * @param  list<array<string, mixed>>  $components
+     * @return array<string, mixed>
+     */
+    private function pageProject(array $components): array
+    {
+        return [
+            'pages' => [
+                [
+                    'id' => 'page-1',
+                    'type' => 'main',
+                    'frames' => [
+                        [
+                            'id' => 'frame-1',
+                            'component' => ['type' => 'wrapper', 'components' => $components],
+                        ],
+                    ],
+                ],
+            ],
+            'styles' => [],
+            'assets' => [],
+        ];
+    }
+
+    /**
      * A heading node carrying inline text, as the GrapesJS editor stores it.
      *
      * @param  array<string, mixed>  $attributes
@@ -103,6 +131,90 @@ class VisualBuilderTest extends TestCase
             ->assertOk()
             ->assertSee('Construído', false)
             ->assertSee('pb-main', false);
+    }
+
+    public function test_page_based_project_renders_through_the_component_registry(): void
+    {
+        $editor = $this->editor();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.publish', $page), [
+                'html' => '<h1>fallback</h1>',
+                'css' => 'h2 { color: #0d6efd; }',
+                'json' => json_encode($this->pageProject([
+                    $this->heading(['data-pb-level' => '3']),
+                ])),
+            ])
+            ->assertOk()
+            ->assertJson(['ok' => true, 'version' => 2]);
+
+        $page->refresh();
+
+        $this->assertIsArray($page->builder_published['components'] ?? null);
+        $this->assertStringContainsString('<h3', $page->builder_published['html']);
+        $this->assertStringContainsString('pb-heading', $page->builder_published['html']);
+
+        $this->get('/pagina')
+            ->assertOk()
+            ->assertSee('Construído', false)
+            ->assertSee('pb-main', false);
+    }
+
+    public function test_autosave_stores_a_page_based_draft(): void
+    {
+        $editor = $this->editor();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.autosave', $page), [
+                'data' => json_encode($this->pageProject([
+                    $this->heading(content: 'Rascunho em página'),
+                ])),
+            ])
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $page->refresh();
+
+        $this->assertIsArray($page->builder_draft);
+        $this->assertArrayHasKey('pages', $page->builder_draft);
+        $this->assertStringContainsString('Rascunho em página', json_encode($page->builder_draft, JSON_UNESCAPED_UNICODE));
+    }
+
+    public function test_autosave_rejects_a_payload_without_components_or_pages(): void
+    {
+        $editor = $this->editor();
+        $page = $this->createPage();
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.autosave', $page), ['data' => '{"dataSources":[]}'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('data');
+    }
+
+    public function test_html_component_renders_sanitized_raw_markup(): void
+    {
+        $editor = $this->editor();
+        $page = $this->createPage();
+
+        $node = [
+            'tagName' => 'div',
+            'attributes' => [
+                'data-pb-type' => 'html',
+                'data-pb-code' => '<h3 class="pb-x">Olá <script>alert(1)</script><a href="javascript:evil()">clique</a></h3>',
+            ],
+        ];
+
+        $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.publish', $page), $this->publishPayload([$node], html: '<div></div>'))
+            ->assertOk();
+
+        $page->refresh();
+
+        $this->assertStringContainsString('<h3 class="pb-x">Olá', $page->builder_published['html']);
+        $this->assertStringNotContainsString('<script', $page->builder_published['html']);
+        $this->assertStringNotContainsString('javascript:', $page->builder_published['html']);
     }
 
     public function test_unregistered_component_types_are_skipped(): void

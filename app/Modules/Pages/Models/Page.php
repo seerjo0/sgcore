@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'published_at',
     'builder_draft',
     'builder_published',
+    'builder_custom_css',
     'builder_version',
 ])]
 class Page extends Model

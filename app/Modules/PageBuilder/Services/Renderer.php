@@ -96,6 +96,16 @@ class Renderer
     }
 
     /**
+     * Render an arbitrary already-built content + css as a full standalone
+     * document, for the editor's live preview. Bypasses the version cache so a
+     * draft preview never collides with the published document.
+     */
+    public function previewDocument(Page $page, string $content, string $css): string
+    {
+        return $this->document($content, $this->sanitizer->sanitizeCss($css), $page);
+    }
+
+    /**
      * Bump the global purge epoch: every cached document/template render is
      * abandoned and rebuilt on the next request. A monotonic counter (not a
      * timestamp) so two bumps in the same second still produce new keys.
@@ -187,6 +197,21 @@ class Renderer
             : $this->sanitizer->sanitizeCss((string) ($template->css ?? ''));
     }
 
+    /**
+     * Page-level custom CSS, sanitized at render (stored raw). Empty for the
+     * not-found document, which has no page.
+     */
+    private function pageCustomCss(?Page $page): string
+    {
+        if ($page === null) {
+            return '';
+        }
+
+        $css = trim((string) ($page->builder_custom_css ?? ''));
+
+        return $css === '' ? '' : "\n".$this->sanitizer->sanitizeCss($css);
+    }
+
     private function siteName(): string
     {
         return (string) $this->settings->get('site_name', config('app.name'));
@@ -234,7 +259,7 @@ class Renderer
             $body .= '<meta property="og:image" content="'.htmlspecialchars($ogImage, ENT_QUOTES, 'UTF-8').'">';
         }
 
-        $safeCss = str_replace('</style', '<\/style', $css.$this->design->css());
+        $safeCss = str_replace('</style', '<\/style', $css.$this->design->css().$this->pageCustomCss($page));
         $chromeCss = '.pb-nav-link{color:#334155;font-weight:500;padding:.25rem .5rem;border-radius:.375rem}'
             .'.pb-nav-link:hover{color:#0d6efd}'
             .'.pb-footer-nav a{color:#cbd5e1;text-decoration:none}'

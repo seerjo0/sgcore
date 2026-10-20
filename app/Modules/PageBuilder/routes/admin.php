@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('can:manage-pages')->prefix('paginas')->name('admin.paginas.builder.')->group(function (): void {
     Route::get('/{page}/construtor', [PageBuilderController::class, 'edit'])->name('index');
     Route::post('/{page}/construtor/autosave', [PageBuilderController::class, 'autosave'])->name('autosave');
+    Route::post('/{page}/construtor/preview', [PageBuilderController::class, 'preview'])->name('preview');
+    Route::post('/{page}/construtor/descartar', [PageBuilderController::class, 'discard'])->name('discard');
+    Route::post('/{page}/construtor/css', [PageBuilderController::class, 'saveCss'])->name('css');
     Route::post('/{page}/construtor/publicar', [PageBuilderController::class, 'publish'])->name('publish');
     Route::get('/{page}/construtor/revisoes', [PageBuilderController::class, 'revisions'])->name('revisions');
     Route::get('/{page}/construtor/revisoes/{revision}/diferencas', [PageBuilderController::class, 'revisionDiff'])->name('revisions.diff');

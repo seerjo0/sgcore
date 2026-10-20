@@ -6,6 +6,7 @@ use App\Modules\Core\Services\Settings;
 use App\Modules\PageBuilder\Models\BuilderRevision;
 use App\Modules\PageBuilder\Services\BuilderSanitizer;
 use App\Modules\PageBuilder\Services\ComponentRegistry;
+use App\Modules\PageBuilder\Services\Components\ComponentNode;
 use App\Modules\PageBuilder\Services\DesignSystem;
 use App\Modules\PageBuilder\Services\HtmlLineDiff;
 use App\Modules\PageBuilder\Services\RenderContext;
@@ -51,7 +52,7 @@ class PageBuilderController extends Controller
 
         $project = json_decode($data, true);
 
-        if (! is_array($project) || ! isset($project['components'])) {
+        if (! $this->registry->isProject($project)) {
             return response()->json(
                 ['errors' => ['data' => __('pagebuilder.invalid_project')]],
                 422,
@@ -78,21 +79,14 @@ class PageBuilderController extends Controller
 
         $project = json_decode($validated['json'], true);
 
-        if (! is_array($project) || ! isset($project['components'])) {
+        if (! $this->registry->isProject($project)) {
             return response()->json(
                 ['errors' => ['json' => __('pagebuilder.invalid_project')]],
                 422,
             );
         }
 
-        $css = $this->sanitizer->sanitizeCss($validated['css']);
-        $tree = $this->registry->extract($project);
-
-        if ($tree !== null) {
-            $html = $this->registry->renderTree($tree, new RenderContext($this->settings, $page));
-        } else {
-            $html = (string) $this->sanitizer->sanitizeHtml($validated['html']);
-        }
+        [$tree, $html, $css] = $this->renderProject($page, $project, $validated['html'], $validated['css']);
 
         if (trim($html) === '') {
             return response()->json(
@@ -134,6 +128,82 @@ class PageBuilderController extends Controller
             'version' => $version,
             'published_at' => $now,
         ]);
+    }
+
+    /**
+     * POST — preview: render the current editor payload through the same
+     * pipeline as publish and return the full document, without persisting or
+     * bumping versions. Shown in the editor's preview overlay.
+     */
+    public function preview(Request $request, Page $page): JsonResponse
+    {
+        $validated = $request->validate([
+            'html' => ['required', 'string', 'max:'.config('pagebuilder.max_html_bytes')],
+            'css' => ['required', 'string', 'max:'.config('pagebuilder.max_css_bytes')],
+            'json' => ['required', 'string', 'max:'.config('pagebuilder.max_json_bytes')],
+        ]);
+
+        $project = json_decode($validated['json'], true);
+
+        if (! $this->registry->isProject($project)) {
+            return response()->json(
+                ['errors' => ['json' => __('pagebuilder.invalid_project')]],
+                422,
+            );
+        }
+
+        [, $html, $css] = $this->renderProject($page, $project, $validated['html'], $validated['css']);
+
+        return response()->json(['html' => $this->renderer->previewDocument($page, $html, $css)]);
+    }
+
+    /**
+     * POST — discard the working draft, reverting it to the last published
+     * revision (or clearing it when the page was never published).
+     */
+    public function discard(Request $request, Page $page): JsonResponse
+    {
+        $revision = $page->revisions()->latest('id')->first();
+
+        $page->update(['builder_draft' => $revision?->project]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * POST — persist the page-level custom CSS. Stored raw and re-sanitized at
+     * render time (defense in depth); the current version's cache is dropped so
+     * the next public render rebuilds with the new rules.
+     */
+    public function saveCss(Request $request, Page $page): JsonResponse
+    {
+        $validated = $request->validate([
+            'css' => ['nullable', 'string', 'max:'.config('pagebuilder.max_css_bytes')],
+        ]);
+
+        $page->update(['builder_custom_css' => ($validated['css'] ?? '') !== '' ? $validated['css'] : null]);
+
+        $this->renderer->forgetPage($page->id, max(1, (int) $page->builder_version));
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Shared render pipeline for publish and preview: sanitizes CSS, extracts
+     * the typed component tree and renders it (or the sanitized HTML fallback).
+     *
+     * @param  array<string, mixed>  $project
+     * @return array{0: list<ComponentNode>|null, 1: string, 2: string}
+     */
+    private function renderProject(Page $page, array $project, string $htmlInput, string $cssInput): array
+    {
+        $css = $this->sanitizer->sanitizeCss($cssInput);
+        $tree = $this->registry->extract($project);
+        $html = $tree !== null
+            ? $this->registry->renderTree($tree, new RenderContext($this->settings, $page))
+            : (string) $this->sanitizer->sanitizeHtml($htmlInput);
+
+        return [$tree, $html, $css];
     }
 
     /**
