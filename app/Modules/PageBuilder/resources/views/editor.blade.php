@@ -58,6 +58,19 @@
         .pb-css header .pb-actions { display: flex; gap: 6px; }
         .pb-css textarea { flex: 1; width: 100%; min-height: 320px; padding: 14px 16px; border: 0; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5; color: #1e293b; }
         .pb-css textarea:focus { outline: none; }
+        .pb-media { width: min(900px, 94vw); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; background: #fff; border-radius: 10px; box-shadow: 0 20px 50px rgb(0 0 0 / .35); }
+        .pb-media header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #0f172a; color: #e2e8f0; }
+        .pb-media header strong { font-size: 14px; }
+        .pb-media-search { padding: 10px 14px 0; }
+        .pb-media-search input { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .pb-media-search input:focus { outline: none; border-color: #94a3b8; }
+        .pb-media-upload { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; }
+        .pb-media-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 0 14px 14px; overflow-y: auto; }
+        .pb-media-tile { padding: 0; overflow: hidden; cursor: pointer; background: #fff; border: 2px solid #e2e8f0; border-radius: 8px; }
+        .pb-media-tile img { display: block; width: 100%; height: 96px; object-fit: cover; }
+        .pb-media-tile span { display: block; padding: 4px 6px; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pb-media-tile.is-active { border-color: #2563eb; box-shadow: 0 0 0 2px rgb(37 99 235 / .35); }
+        .pb-media-msg { grid-column: 1 / -1; padding: 24px 0; text-align: center; color: #94a3b8; font-size: 13px; }
         #pb-editor { flex: 1; min-height: 0; }
         .hidden { display: none; }
         .pb-toast {
@@ -165,13 +178,6 @@
     <input type="hidden" id="pb-media-target" value="">
     <img id="pb-media-preview" src="" alt="" class="hidden">
 
-    @include('media::picker', [
-        'mode' => 'single',
-        'targetField' => '#pb-media-target',
-        'targetPreview' => '#pb-media-preview',
-        'title' => __('pagebuilder.choose_image'),
-    ])
-
     <script>
         window.pageBuilderConfig = <?php echo json_encode([
             'mode' => $isTemplate ? 'template' : 'page',
@@ -187,12 +193,16 @@
             'endpoints' => $isTemplate ? [
                 'autosave' => route('admin.builder.templates.autosave', $template->type),
                 'publish' => route('admin.builder.templates.publish', $template->type),
+                'mediaSearch' => route('admin.midia.buscar'),
+                'mediaUpload' => route('admin.midia.store'),
             ] : [
                 'autosave' => route('admin.paginas.builder.autosave', $page),
                 'publish' => route('admin.paginas.builder.publish', $page),
                 'preview' => route('admin.paginas.builder.preview', $page),
                 'discard' => route('admin.paginas.builder.discard', $page),
                 'css' => route('admin.paginas.builder.css', $page),
+                'mediaSearch' => route('admin.midia.buscar'),
+                'mediaUpload' => route('admin.midia.store'),
                 'revisions' => route('admin.paginas.builder.revisions', $page),
                 'restore' => url('/admin/paginas/'.$page->id.'/construtor/revisoes').'/{id}/restaurar',
                 'diff' => url('/admin/paginas/'.$page->id.'/construtor/revisoes').'/{id}/diferencas',
@@ -216,6 +226,15 @@
                 'cssClose' => __('pagebuilder.css_close'),
                 'cssSave' => __('pagebuilder.btn_save'),
                 'mediaLibrary' => __('pagebuilder.media_library'),
+                'mediaTitle' => __('media.choose_default'),
+                'mediaSearch' => __('media.search_placeholder'),
+                'mediaUpload' => __('media.upload'),
+                'mediaUse' => __('media.use_selected'),
+                'mediaUploaded' => __('media.uploaded'),
+                'mediaLoading' => __('media.loading'),
+                'mediaEmpty' => __('media.no_results'),
+                'mediaError' => __('media.load_error'),
+                'mediaClose' => __('common.close'),
                 'historyTitle' => __('pagebuilder.history_title'),
                 'historyEmpty' => __('pagebuilder.history_empty'),
                 'historyVersion' => __('pagebuilder.history_version'),

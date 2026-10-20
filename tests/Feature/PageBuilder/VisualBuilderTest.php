@@ -512,7 +512,7 @@ class VisualBuilderTest extends TestCase
             ->assertOk()
             ->assertSee('pageBuilderConfig', false)
             ->assertSee('"mode":"template"', false)
-            ->assertSee('media-picker', false);
+            ->assertSee('mediaSearch', false);
     }
 
     public function test_templates_screen_requires_authorization(): void

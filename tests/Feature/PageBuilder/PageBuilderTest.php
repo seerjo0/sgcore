@@ -80,7 +80,7 @@ class PageBuilderTest extends TestCase
             ->get(route('admin.paginas.builder.index', $page))
             ->assertOk()
             ->assertSee('pageBuilderConfig', false)
-            ->assertSee('media-picker', false)
+            ->assertSee('mediaSearch', false)
             ->assertSee('pb-media-target', false);
     }
 

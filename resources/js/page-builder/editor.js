@@ -135,17 +135,162 @@ import 'grapesjs/dist/css/grapes.min.css';
         },
     });
 
-    const originalUsePicker = window.usePickerSelection;
+    function mediaGrid() {
+        return mediaOverlay ? mediaOverlay.querySelector('[data-act="grid"]') : null;
+    }
 
-    window.usePickerSelection = function () {
-        if (typeof originalUsePicker === 'function') {
-            originalUsePicker();
+    function markSelectedTile() {
+        if (! mediaOverlay || ! mediaSelected) {
+            return;
         }
 
-        if (typeof window.pbApplyMediaSelection === 'function') {
-            window.pbApplyMediaSelection();
+        mediaOverlay.querySelectorAll('.pb-media-tile').forEach((tile) => {
+            tile.classList.toggle('is-active', tile.dataset.id === String(mediaSelected.id));
+        });
+    }
+
+    function selectMedia(tile) {
+        mediaSelected = { id: tile.dataset.id, url: tile.dataset.url, alt: tile.dataset.alt };
+        markSelectedTile();
+    }
+
+    async function loadMedia(query) {
+        const grid = mediaGrid();
+
+        if (! grid) {
+            return;
         }
-    };
+
+        grid.innerHTML = '<p class="pb-media-msg">' + escapeHtml(S.mediaLoading) + '</p>';
+
+        try {
+            const response = await fetch(cfg.endpoints.mediaSearch + '?per_page=24&q=' + encodeURIComponent(query), {
+                headers: { Accept: 'application/json' },
+            });
+            const payload = await response.json();
+            const items = payload.data ?? [];
+
+            if (items.length === 0) {
+                grid.innerHTML = '<p class="pb-media-msg">' + escapeHtml(S.mediaEmpty) + '</p>';
+
+                return;
+            }
+
+            grid.innerHTML = items.map((item) => '<button type="button" class="pb-media-tile" data-id="' + item.id
+                + '" data-url="' + escapeHtml(item.url) + '" data-alt="' + escapeHtml(item.alt || item.filename) + '">'
+                + '<img src="' + escapeHtml(item.url) + '" alt="" loading="lazy">'
+                + '<span>' + escapeHtml(item.filename) + '</span></button>').join('');
+
+            grid.querySelectorAll('.pb-media-tile').forEach((tile) => {
+                tile.addEventListener('click', () => selectMedia(tile));
+            });
+
+            markSelectedTile();
+        } catch (error) {
+            grid.innerHTML = '<p class="pb-media-msg">' + escapeHtml(S.mediaError) + '</p>';
+        }
+    }
+
+    function openMediaModal() {
+        if (mediaOverlay) {
+            loadMedia(mediaOverlay.querySelector('[data-act="q"]').value);
+
+            return;
+        }
+
+        mediaSelected = null;
+        mediaOverlay = document.createElement('div');
+        mediaOverlay.className = 'pb-modal';
+        mediaOverlay.innerHTML = '<div class="pb-media"><header><strong>' + escapeHtml(S.mediaTitle) + '</strong>'
+            + '<button type="button" class="pb-btn" data-act="close">' + escapeHtml(S.mediaClose) + '</button></header>'
+            + '<div class="pb-media-search"><input type="search" data-act="q" placeholder="' + escapeHtml(S.mediaSearch) + '"></div>'
+            + '<div class="pb-media-upload"><label class="pb-btn">' + escapeHtml(S.mediaUpload)
+            + '<input type="file" accept="image/*" multiple hidden data-act="file"></label>'
+            + '<button type="button" class="pb-btn pb-btn-primary" data-act="use">' + escapeHtml(S.mediaUse) + '</button></div>'
+            + '<div class="pb-media-grid" data-act="grid"></div></div>';
+
+        document.body.appendChild(mediaOverlay);
+
+        let timer = null;
+        mediaOverlay.querySelector('[data-act="q"]').addEventListener('input', (event) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => loadMedia(event.target.value), 300);
+        });
+        mediaOverlay.querySelector('[data-act="close"]').addEventListener('click', closeMediaModal);
+        mediaOverlay.querySelector('[data-act="use"]').addEventListener('click', confirmMediaSelection);
+        mediaOverlay.querySelector('[data-act="file"]').addEventListener('change', (event) => uploadMedia(event.target.files));
+
+        loadMedia('');
+    }
+
+    function confirmMediaSelection() {
+        if (mediaSelected) {
+            const target = document.getElementById('pb-media-target');
+            const preview = document.getElementById('pb-media-preview');
+
+            if (target) {
+                target.value = mediaSelected.id;
+            }
+
+            if (preview) {
+                preview.src = mediaSelected.url;
+                preview.classList.remove('hidden');
+            }
+
+            if (typeof window.pbApplyMediaSelection === 'function') {
+                window.pbApplyMediaSelection();
+            }
+        }
+
+        closeMediaModal();
+    }
+
+    async function uploadMedia(files) {
+        if (! files || files.length === 0) {
+            return;
+        }
+
+        const form = new FormData();
+        Array.from(files).forEach((file) => form.append('files[]', file));
+
+        try {
+            const response = await fetch(cfg.endpoints.mediaUpload, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken(), Accept: 'application/json' },
+                body: form,
+            });
+
+            if (! response.ok) {
+                const body = await response.json().catch(() => null);
+                toast(httpError(response, body, S.mediaError), 'error');
+
+                return;
+            }
+
+            const payload = await response.json();
+            const created = payload.data ?? [];
+
+            if (created.length > 0) {
+                mediaSelected = { id: created[0].id, url: created[0].url, alt: created[0].alt || created[0].filename };
+                toast(S.mediaUploaded.replace(':count', created.length), 'success');
+            }
+
+            loadMedia(mediaOverlay.querySelector('[data-act="q"]').value);
+        } catch (error) {
+            toast(`${S.networkError ?? S.statusUnsaved} (${cfg.endpoints.mediaUpload})`, 'error');
+        }
+    }
+
+    function closeMediaModal() {
+        if (mediaOverlay) {
+            mediaOverlay.remove();
+            mediaOverlay = null;
+            mediaSelected = null;
+        }
+    }
+
+    window.openMediaPicker = openMediaModal;
+    window.closeMediaPicker = closeMediaModal;
 
     const statusEl = document.getElementById('pb-save-status');
     const saveNowBtn = document.getElementById('pb-save-now');
@@ -157,6 +302,8 @@ import 'grapesjs/dist/css/grapes.min.css';
     let dirty = false;
     let previewOverlay = null;
     let cssOverlay = null;
+    let mediaOverlay = null;
+    let mediaSelected = null;
     let customCss = cfg.customCss ?? '';
 
     editor.on('load', () => {
@@ -548,6 +695,10 @@ import 'grapesjs/dist/css/grapes.min.css';
 
                 if (cssOverlay) {
                     closeCssModal();
+                }
+
+                if (mediaOverlay) {
+                    closeMediaModal();
                 }
 
                 return;
