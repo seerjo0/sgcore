@@ -13,7 +13,7 @@ use ZipArchive;
 class PackageCommand extends Command
 {
     protected $signature = 'sgcore:package
-        {--version= : Versão do pacote (padrão: config cms.version)}
+        {--pkg-version= : Versão do pacote (padrão: config cms.version)}
         {--out= : Caminho do .zip de saída}
         {--skip-composer : Não roda composer install --no-dev no staging}
         {--skip-npm : Não roda npm ci + build no staging (usa public/build atual)}
@@ -23,7 +23,7 @@ class PackageCommand extends Command
 
     public function handle(PackageBuilder $builder): int
     {
-        $version = trim((string) $this->option('version')) ?: (string) config('cms.version');
+        $version = trim((string) $this->option('pkg-version')) ?: (string) config('cms.version');
         $version = ltrim($version, 'vV');
         $name = (string) config('cms.packager.name', 'sgcore');
 
