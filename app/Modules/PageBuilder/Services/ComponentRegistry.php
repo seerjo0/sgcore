@@ -58,6 +58,15 @@ class ComponentRegistry
     }
 
     /**
+     * Whether the given payload is a well-formed GrapesJS project, in either
+     * the flat `{ components }` or the page-based `{ pages }` shape.
+     */
+    public function isProject(mixed $project): bool
+    {
+        return $this->extractor->isProject($project);
+    }
+
+    /**
      * @param  array<string, mixed>|null  $project
      * @return list<ComponentNode>|null
      */

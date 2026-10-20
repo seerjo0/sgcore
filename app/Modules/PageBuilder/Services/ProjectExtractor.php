@@ -25,12 +25,44 @@ class ProjectExtractor
      */
     public function extract(?array $project): ?array
     {
-        $components = is_array($project['components'] ?? null) ? $project['components'] : [];
-
         $counter = 0;
-        $tree = $this->extractNodes($components, $counter);
+        $tree = $this->extractNodes($this->roots($project), $counter);
 
         return $tree === [] ? null : $tree;
+    }
+
+    /**
+     * Whether the payload is a well-formed GrapesJS project. The editor has
+     * shipped two project shapes over time: the flat `{ components }` and the
+     * page-based `{ pages: [{ frames }] }` introduced with the page manager.
+     *
+     * @param  array<string, mixed>|null  $project
+     */
+    public function isProject(mixed $project): bool
+    {
+        if (! is_array($project)) {
+            return false;
+        }
+
+        return is_array($project['components'] ?? null) || is_array($project['pages'] ?? null);
+    }
+
+    /**
+     * Resolve the top-level component list regardless of the project shape:
+     * the flat `components` key, or the first page frame's wrapper children.
+     *
+     * @param  array<string, mixed>|null  $project
+     * @return array<int, mixed>
+     */
+    private function roots(?array $project): array
+    {
+        if (is_array($project['components'] ?? null)) {
+            return $project['components'];
+        }
+
+        $root = $project['pages'][0]['frames'][0]['component'] ?? null;
+
+        return is_array($root) && is_array($root['components'] ?? null) ? $root['components'] : [];
     }
 
     /**
