@@ -292,6 +292,177 @@ import 'grapesjs/dist/css/grapes.min.css';
     window.openMediaPicker = openMediaModal;
     window.closeMediaPicker = closeMediaModal;
 
+    let layersOverlay = null;
+    let copiedStyle = null;
+
+    function layerName(component) {
+        const name = component.getName ? String(component.getName()).trim() : '';
+
+        if (name !== '') {
+            return name;
+        }
+
+        return String(component.get('tagName') || component.get('type') || 'component').trim();
+    }
+
+    function findByCid(component, cid) {
+        if (component.cid === cid) {
+            return component;
+        }
+
+        const models = component.components() ? (component.components().models || []) : [];
+
+        for (const child of models) {
+            const found = findByCid(child, cid);
+
+            if (found) {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    function moveLayer(cid, delta) {
+        const component = findByCid(editor.getWrapper(), cid);
+        const parent = component && component.parent();
+
+        if (! parent) {
+            return;
+        }
+
+        const target = component.index() + delta;
+
+        if (target < 0 || target >= parent.components().length()) {
+            return;
+        }
+
+        component.move(parent, { at: target });
+        refreshLayers();
+    }
+
+    function selectByCid(cid) {
+        const component = findByCid(editor.getWrapper(), cid);
+
+        if (component) {
+            editor.select(component);
+            refreshLayers();
+        }
+    }
+
+    function renderLayerRow(component, depth, rows) {
+        const selected = editor.getSelected();
+        const active = selected && selected.cid === component.cid;
+        const parent = component.parent();
+        const total = parent ? parent.components().length() : 0;
+        const index = parent ? component.index() : 0;
+        const cid = escapeHtml(component.cid);
+
+        rows.push('<div class="pb-layer-row' + (active ? ' is-active' : '') + '" style="padding-left:' + (depth * 16 + 8) + 'px">'
+            + '<button type="button" class="pb-layer-name" data-select="' + cid + '">' + escapeHtml(layerName(component)) + '</button>'
+            + '<span class="pb-layer-move">'
+            + '<button type="button" class="pb-layer-btn" data-up="' + cid + '"' + (index > 0 ? '' : ' disabled') + '>&uarr;</button>'
+            + '<button type="button" class="pb-layer-btn" data-down="' + cid + '"' + (index < total - 1 ? '' : ' disabled') + '>&darr;</button>'
+            + '</span></div>');
+
+        const models = component.components() ? (component.components().models || []) : [];
+        models.forEach((child) => renderLayerRow(child, depth + 1, rows));
+    }
+
+    function refreshLayers() {
+        const list = layersOverlay && layersOverlay.querySelector('[data-act="list"]');
+
+        if (! list) {
+            return;
+        }
+
+        const wrapper = editor.getWrapper();
+        const roots = wrapper && wrapper.components() ? (wrapper.components().models || []) : [];
+
+        if (roots.length === 0) {
+            list.innerHTML = '<p class="pb-layer-empty">' + escapeHtml(S.layersEmpty) + '</p>';
+
+            return;
+        }
+
+        const rows = [];
+        roots.forEach((component) => renderLayerRow(component, 0, rows));
+        list.innerHTML = rows.join('');
+
+        list.querySelectorAll('[data-select]').forEach((btn) => {
+            btn.addEventListener('click', () => selectByCid(btn.getAttribute('data-select')));
+        });
+        list.querySelectorAll('[data-up]').forEach((btn) => {
+            btn.addEventListener('click', () => moveLayer(btn.getAttribute('data-up'), -1));
+        });
+        list.querySelectorAll('[data-down]').forEach((btn) => {
+            btn.addEventListener('click', () => moveLayer(btn.getAttribute('data-down'), 1));
+        });
+    }
+
+    function openLayersModal() {
+        if (layersOverlay) {
+            refreshLayers();
+
+            return;
+        }
+
+        layersOverlay = document.createElement('div');
+        layersOverlay.className = 'pb-modal';
+        layersOverlay.innerHTML = '<div class="pb-layers"><header><strong>' + escapeHtml(S.layersTitle) + '</strong>'
+            + '<button type="button" class="pb-btn" data-act="close">' + escapeHtml(S.layersClose) + '</button></header>'
+            + '<div class="pb-layers-list" data-act="list"></div></div>';
+
+        document.body.appendChild(layersOverlay);
+        layersOverlay.querySelector('[data-act="close"]').addEventListener('click', closeLayersModal);
+        refreshLayers();
+    }
+
+    function closeLayersModal() {
+        if (layersOverlay) {
+            layersOverlay.remove();
+            layersOverlay = null;
+        }
+    }
+
+    function copyStyle() {
+        const component = editor.getSelected();
+
+        if (! component) {
+            toast(S.styleNone, 'error');
+
+            return;
+        }
+
+        copiedStyle = { ...component.getStyle() };
+        toast(S.styleCopied, 'success');
+    }
+
+    function pasteStyle() {
+        const component = editor.getSelected();
+
+        if (! component || ! copiedStyle) {
+            toast(S.styleNone, 'error');
+
+            return;
+        }
+
+        component.setStyle(copiedStyle);
+        toast(S.stylePasted, 'success');
+    }
+
+    function clearStyle() {
+        const component = editor.getSelected();
+
+        if (! component) {
+            toast(S.styleNone, 'error');
+
+            return;
+        }
+
+        component.setStyle({});
+    }
+
     const statusEl = document.getElementById('pb-save-status');
     const saveNowBtn = document.getElementById('pb-save-now');
     const publishBtn = document.getElementById('pb-publish');
@@ -686,6 +857,22 @@ import 'grapesjs/dist/css/grapes.min.css';
         bind('pb-preview', openPreview);
         bind('pb-discard', discardDraft);
         bind('pb-css-btn', openCssModal);
+        bind('pb-layers', openLayersModal);
+        bind('pb-copy-style', copyStyle);
+        bind('pb-paste-style', pasteStyle);
+        bind('pb-clear-style', clearStyle);
+
+        editor.on('component:selected component:deselected', () => {
+            if (layersOverlay) {
+                refreshLayers();
+            }
+        });
+
+        editor.on('update', () => {
+            if (layersOverlay) {
+                refreshLayers();
+            }
+        });
 
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
@@ -699,6 +886,10 @@ import 'grapesjs/dist/css/grapes.min.css';
 
                 if (mediaOverlay) {
                     closeMediaModal();
+                }
+
+                if (layersOverlay) {
+                    closeLayersModal();
                 }
 
                 return;

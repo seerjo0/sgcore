@@ -71,6 +71,19 @@
         .pb-media-tile span { display: block; padding: 4px 6px; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pb-media-tile.is-active { border-color: #2563eb; box-shadow: 0 0 0 2px rgb(37 99 235 / .35); }
         .pb-media-msg { grid-column: 1 / -1; padding: 24px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+        .pb-layers { width: min(560px, 94vw); max-height: 82vh; display: flex; flex-direction: column; overflow: hidden; background: #fff; border-radius: 10px; box-shadow: 0 20px 50px rgb(0 0 0 / .35); }
+        .pb-layers header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #0f172a; color: #e2e8f0; }
+        .pb-layers header strong { font-size: 14px; }
+        .pb-layers-list { padding: 6px; overflow-y: auto; font-size: 13px; }
+        .pb-layer-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 6px; }
+        .pb-layer-row:hover { background: #f1f5f9; }
+        .pb-layer-row.is-active { background: #e0e7ff; }
+        .pb-layer-name { flex: 1; padding: 2px 0; overflow: hidden; text-align: left; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; color: #1e293b; background: none; border: 0; cursor: pointer; }
+        .pb-layer-move { display: flex; gap: 2px; }
+        .pb-layer-btn { width: 24px; height: 24px; line-height: 1; color: #475569; cursor: pointer; background: #fff; border: 1px solid #cbd5e1; border-radius: 5px; }
+        .pb-layer-btn:hover:not(:disabled) { background: #f1f5f9; }
+        .pb-layer-btn:disabled { cursor: default; opacity: .35; }
+        .pb-layer-empty { padding: 24px 0; text-align: center; color: #94a3b8; }
         #pb-editor { flex: 1; min-height: 0; }
         .hidden { display: none; }
         .pb-toast {
@@ -149,6 +162,11 @@
             <span class="pb-tool-sep"></span>
             <button type="button" id="pb-duplicate" class="pb-tool" title="{{ __('pagebuilder.tool_duplicate') }}" aria-label="{{ __('pagebuilder.tool_duplicate') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
             <button type="button" id="pb-delete" class="pb-tool" title="{{ __('pagebuilder.tool_delete') }}" aria-label="{{ __('pagebuilder.tool_delete') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+            <span class="pb-tool-sep"></span>
+            <button type="button" id="pb-layers" class="pb-tool" title="{{ __('pagebuilder.tool_layers') }}" aria-label="{{ __('pagebuilder.tool_layers') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5"/></svg></button>
+            <button type="button" id="pb-copy-style" class="pb-tool" title="{{ __('pagebuilder.tool_copy_style') }}" aria-label="{{ __('pagebuilder.tool_copy_style') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="6" rx="1"/><path d="M15 7h3a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-6v3a2 2 0 0 0 2 2h1"/><circle cx="11" cy="18" r="2"/></svg></button>
+            <button type="button" id="pb-paste-style" class="pb-tool" title="{{ __('pagebuilder.tool_paste_style') }}" aria-label="{{ __('pagebuilder.tool_paste_style') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><path d="M8 12h8M8 16h5"/></svg></button>
+            <button type="button" id="pb-clear-style" class="pb-tool" title="{{ __('pagebuilder.tool_clear_style') }}" aria-label="{{ __('pagebuilder.tool_clear_style') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 20-5-5c-1-1-1-3 0-4l8-8c1-1 3-1 4 0l5 5c1 1 1 3 0 4l-8 8z"/><path d="m6 10 8 8"/><path d="M9 21h11"/></svg></button>
         </div>
         @if (! $isTemplate)
             <button type="button" id="pb-history-btn" class="pb-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ __('pagebuilder.history_title') }}</button>
@@ -235,6 +253,12 @@
                 'mediaEmpty' => __('media.no_results'),
                 'mediaError' => __('media.load_error'),
                 'mediaClose' => __('common.close'),
+                'layersTitle' => __('pagebuilder.layers_title'),
+                'layersClose' => __('pagebuilder.layers_close'),
+                'layersEmpty' => __('pagebuilder.layers_empty'),
+                'styleCopied' => __('pagebuilder.style_copied'),
+                'stylePasted' => __('pagebuilder.style_pasted'),
+                'styleNone' => __('pagebuilder.style_none'),
                 'historyTitle' => __('pagebuilder.history_title'),
                 'historyEmpty' => __('pagebuilder.history_empty'),
                 'historyVersion' => __('pagebuilder.history_version'),
