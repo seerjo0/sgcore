@@ -84,7 +84,7 @@ $app = require_once __DIR__.'/bootstrap/app.php';
 
 // When booted from the project root, Laravel still looks for built assets under
 // public/. Point it there so Vite's manifest resolves without moving files.
-$app->usePublicPaths(__DIR__.'/public');
+$app->usePublicPath(__DIR__.'/public');
 
 $app->handleRequest(Request::capture());
 

@@ -126,7 +126,9 @@ class PackageBuilderTest extends TestCase
         // Front controller resolves vendor/bootstrap from the project root (no ../).
         $this->assertStringContainsString("__DIR__.'/vendor/autoload.php'", $index);
         $this->assertStringContainsString("__DIR__.'/bootstrap/app.php'", $index);
-        $this->assertStringContainsString('usePublicPaths', $index);
+        // usePublicPath (singular) is the real Application API; usePublicPaths does not exist.
+        $this->assertStringContainsString('usePublicPath', $index);
+        $this->assertStringNotContainsString('usePublicPaths', $index);
 
         // Apache rules deny internal dirs.
         $this->assertStringContainsString('vendor', $htaccess);
