@@ -4,6 +4,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
+### Planned
+- Comentários nos posts do blog.
+- Tags de post (além de categoria única).
+- Feed RSS/Atom do blog.
+- API headless (`/api/v1/posts`, `/api/v1/pages`).
+- Multi-idioma de conteúdo por registro.
+
+## [1.0.1] — 2026-10-21
+
 ### Adicionado
 - **Atualização por pacote `.zip` (estilo WordPress)** para shared hosting, sem `git`/`composer`/`node` no servidor:
   - O botão "Aplicar atualização" ganhou seletor de método **Git / Pacote .zip** (upload do `.zip` ou download do asset da Release).
@@ -24,20 +33,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - **Instalador pronto para shared hosting** (`sgcore-1.0.0-public_html.zip`, ~8,5 MB, 6.783 arquivos): pacote autocontido gerado do HEAD com `vendor/` de produção + assets + front-controller raiz + `.htaccess`/`web.config`, sem `.env`/dev, acompanhado de `COMO-INSTALAR.txt`.
 - **Importar página do tema para o construtor**: novo `App\Modules\Themes\Services\ThemePageImporter` lê o HTML estático de um template do tema (`index.html`/`page.html`/`404.html`), descarta o chrome (header/footer/`<nav>` menus) e converte o `<main>` numa árvore de **componentes nativos do builder** (section/container/row/col/heading/text/image/button/list/blockquote), mapeando `data-cms-slot` dinâmico para os bindings do construtor (`site.name`→`{site:name}`, `page.title`→`{page:title}`) e o que não casa para um bloco `html` sanitizado. Gera um `builder_draft` editável e cria uma `Page` em rascunho. Botão **"Converter e editar"** em Aparência por tema válido (rota `admin.aparencia.importar`, exige `manage-appearance` + `manage-pages`), abrindo direto no construtor. Chaves `themes.import_*`/`imported_page` nos dois idiomas.
 - **Páginas de erro personalizadas**: `App\Support\ErrorPresenter` + view autocontida `resources/views/errors/error.blade.php` (CSS embutido, sem depender de Vite) substituem as telas padrão do Laravel/Ignition para 400/401/403/404/405/413/419/429/500/503/504 e genéricas, com marca sgcore e CTAs. Em `APP_DEBUG=true` exibem os mesmos detalhes técnicos do Laravel (classe da exceção, mensagem, `arquivo:linha`, trecho do código com a linha do erro destacada, stack resumida e dados da requisição/cabeçalhos). `ValidationException` e `AuthenticationException` continuam com o redirect/JSON padrão do framework.
-- **Suite de testes**: sobe para **332 testes / 1393 asserções** (5 novos de tela de erro: mapeamento de status, debug mostra detalhes, produção oculta, 404, e JSON não é substituído), Pint limpo; `pagebuilder.*` + `errors.*` totalizando chaves alinhadas alfabeticamente em `en`/`pt_BR`.
+- **Suite de testes**: sobe para **337 testes / 1412 asserções** (novos: tela de erro, importação tema→construtor, preview/descartar/CSS por página, HTML sanitizado, upload de mídia JSON e formato por-páginas), Pint limpo; `pagebuilder.*`, `errors.*` e `themes.*` alinhados alfabeticamente em `en`/`pt_BR`.
 
 ### Corrigido
 - **Salvamento/Publicação do Construtor (HTTP 422 em todo autosave/publicar)**: o GrapesJS ≥ 0.21 (page manager no core) serializa os componentes sob `pages[].frames[].component`, mas o backend exigia uma chave `components` no topo e devolvia 422 "Projeto do construtor inválido". `ProjectExtractor::roots()/isProject()` aceitam agora ambos os formatos (flat e por-páginas), o `PageBuilderController` valida por `ComponentRegistry::isProject()`, e o editor recarrega o rascunho quando há `pages`. O limite `max_json_bytes` foi ajustado a `8_000_000` (margem segura sob `post_max_size` de 8M).
 - **Avisos do editor agora revelam a causa real**: novo `httpError()` exibe o status HTTP + mensagem do servidor (com caso dedicado de sessão expirada para 401/419 e aviso de erro de rede indicando o endpoint); os endpoints de autosave/publicar/preview/etc. são normalizados para **mesma origem** (evita falha cross-origin quando o painel é aberto por host/porta diferente de `APP_URL`).
 - **`sgcore:package` não executava**: a opção `--version` do comando colidia com a opção global `--version` do console (`An option named "version" already exists`), travando qualquer invocação; renomeada para `--pkg-version` (os testes só cobriam `PackageBuilder::assemble`, nunca o comando).
 - **Mídia dentro do editor**: o seletor de imagem parou de depender do `media::picker` em Tailwind (incompatível com a página standalone do construtor).
-
-### Planned
-- Comentários nos posts do blog.
-- Tags de post (além de categoria única).
-- Feed RSS/Atom do blog.
-- API headless (`/api/v1/posts`, `/api/v1/pages`).
-- Multi-idioma de conteúdo por registro.
 
 ## [1.0.0] — 2026-10-13
 
