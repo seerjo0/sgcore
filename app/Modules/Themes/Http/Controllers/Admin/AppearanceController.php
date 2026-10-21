@@ -6,6 +6,7 @@ use App\Modules\Core\Services\Settings;
 use App\Modules\Themes\Services\ThemeDiscovery;
 use App\Modules\Themes\Services\ThemeImporter;
 use App\Modules\Themes\Services\ThemeImportException;
+use App\Modules\Themes\Services\ThemePageImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -16,6 +17,7 @@ class AppearanceController extends Controller
     public function __construct(
         private ThemeDiscovery $discovery,
         private ThemeImporter $importer,
+        private ThemePageImporter $pageImporter,
         private Settings $settings,
     ) {}
 
@@ -69,5 +71,32 @@ class AppearanceController extends Controller
         $this->settings->set('active_theme', $theme->slug, 'general');
 
         return back()->with('success', __('themes.activated', ['name' => $theme->name()]));
+    }
+
+    /**
+     * POST /admin/aparencia/importar — convert a theme template into an
+     * editable Site Builder page and open it in the editor.
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme' => ['required', 'string', 'max:100'],
+            'template' => ['required', 'string', 'max:40'],
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $page = $this->pageImporter->importToPage(
+                $validated['theme'],
+                $validated['template'],
+                $validated['title'],
+            );
+        } catch (\Throwable $e) {
+            return back()->withErrors(['theme' => $e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.paginas.builder.index', $page)
+            ->with('success', __('themes.imported_page', ['title' => $page->title]));
     }
 }

@@ -8,6 +8,7 @@ use App\Modules\Themes\Services\ContentStore;
 use App\Modules\Themes\Services\ThemeDiscovery;
 use App\Modules\Themes\Services\ThemeImporter;
 use App\Modules\Themes\Services\ThemeManifest;
+use App\Modules\Themes\Services\ThemePageImporter;
 use App\Modules\Themes\Services\ThemeRenderer;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +25,7 @@ class ThemesServiceProvider extends ServiceProvider
         $this->app->singleton(ContentStore::class);
         $this->app->singleton(ThemeRenderer::class);
         $this->app->singleton(ThemeImporter::class);
+        $this->app->singleton(ThemePageImporter::class);
     }
 
     /**

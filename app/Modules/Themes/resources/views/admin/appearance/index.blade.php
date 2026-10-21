@@ -107,6 +107,29 @@
                                     </button>
                                 </form>
                             @endif
+
+                            @can('manage-pages')
+                                @if ($theme->valid && $theme->templates() !== [])
+                                    <form method="POST" action="{{ route('admin.aparencia.importar') }}"
+                                          class="mt-2 flex flex-wrap items-center gap-2">
+                                        @csrf
+                                        <input type="hidden" name="theme" value="{{ $theme->slug }}">
+                                        <select name="template" aria-label="{{ __('themes.import_templates') }}"
+                                                class="min-w-28 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-700">
+                                            @foreach (array_keys($theme->templates()) as $templateKey)
+                                                <option value="{{ $templateKey }}">{{ $templateKey }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input name="title" required maxlength="255"
+                                               placeholder="{{ __('themes.import_page_title') }}"
+                                               class="min-w-40 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                                        <button type="submit"
+                                                class="rounded-lg border border-primary-600 px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">
+                                            {{ __('themes.import_convert') }}
+                                        </button>
+                                    </form>
+                                @endif
+                            @endcan
                         </div>
                     </div>
                 </div>
