@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureInstallState;
 use App\Modules\Core\Http\Middleware\SetLocale;
+use App\Support\ErrorPresenter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,4 +29,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(fn (Throwable $e, Request $request) => ErrorPresenter::render($request, $e));
     })->create();
