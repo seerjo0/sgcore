@@ -11,6 +11,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.1.0-r2] — 2026-10-22
+
+Revisão 2 da 1.1.0: correções na tela de Atualizações e na preservação da versão de PHP. Sem migration nova.
+
+### Corrigido
+- **Tela de Atualizações mostrava o placeholder `:version`**: o texto `updater.available` ("Nova versão :version disponível…") era usado como rótulo estático do campo "disponível", sem o parâmetro, então a versão nunca aparecia. Agora a mensagem é um aviso de largura total (verde quando há atualização) com a tag interpolada; sem atualização, aparece apenas "Você está na última versão do SG Core" (novo texto de `updater.up_to_date`, sem versão). O card de versão passou a mostrar a versão atual em destaque e a disponível só quando existir.
+- **Atualização por pacote devolvia o domínio à versão padrão de PHP**: o `.htaccess` da raiz é gerado pelo pacote (regras de rewrite/segurança) e, ao sobrescrever o do servidor, apagava o bloco `# php -- BEGIN/END cPanel-generated handler` onde o cPanel/MultiPHP grava a versão escolhida — era preciso reaplicar a versão manualmente a cada atualização. `PackageUpdater` agora captura esse bloco (ou uma linha `AddHandler`/`AddType` de PHP, em hosts sem cPanel) no `.htaccess` da raiz e em `public/.htaccess` e o recoloca após copiar os arquivos, sem duplicar. Extração manual por File Manager continua substituindo o `.htaccess`: está documentada em `COMO-INSTALAR.txt`/`docs/DEPLOYMENT.md`.
+- **Suíte**: 359 testes / 1473 asserções; Pint limpo.
+
 ## [1.1.0-r1] — 2026-10-22
 
 Revisão 1 da 1.1.0: correção de navegação no painel. Reempacotada sem mudanças de schema.
@@ -107,7 +116,8 @@ Primeira versão estável (v1) do sgcore: CMS modular e self-hosted, construído
 
 Histórico interno durante as Fases 1–9 (scaffold modular → auth → mídia/galerias → páginas/menus → engine de temas → config admin → slots → site/SEO → revisão final) — consolidado em `9d764f4` (2026-10-08). Não é uma release pública; listado apenas por rastreabilidade.
 
-[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.1.0-r1...HEAD
+[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.1.0-r2...HEAD
+[1.1.0-r2]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r2
 [1.1.0-r1]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r1
 [1.1.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0
 [1.0.1]: https://github.com/seerjo0/sgcore/releases/tag/v1.0.1

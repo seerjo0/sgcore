@@ -177,7 +177,7 @@ The in-panel updater and `sgcore:update` only exist since **v1.0.1**. An install
 | `.env` | not in the package — untouched |
 | `storage/` | only `.gitignore` placeholders ship — uploads/logs untouched |
 | `bootstrap/cache/` | `packages.php`/`services.php` caches are refreshed, nothing else |
-| `index.php`, `.htaccess`, `public/.htaccess` | **overwritten** — re-apply any local customizations afterwards |
+| `index.php`, `.htaccess`, `public/.htaccess` | **overwritten** — re-apply any local customizations afterwards (the panel/CLI package updater carries the cPanel PHP handler block over automatically; a manual extract does not, so re-check the domain's PHP version in MultiPHP afterwards) |
 
 **4. Run the pending migrations.** With a shell:
 
