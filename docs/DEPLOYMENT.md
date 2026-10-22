@@ -135,7 +135,7 @@ server {
 
 ## 4. Background processes
 
-The scheduler refreshes the "update available" banner (`sgcore:check-updates`) and cleans old revisions.
+The scheduler refreshes the "update available" banner (`sgcore:check-updates`), runs the configured download/install job (`sgcore:auto-update`) and cleans old revisions. Both update jobs read the panel preferences and exit early when "check automatically" is off.
 
 **Cron (running every minute):**
 ```
@@ -155,12 +155,18 @@ autorestart=true
 
 ## 5. Staying up to date
 
-Set `CMS_VERSION` to your deployed version (default `1.1.0`). The admin panel checks GitHub Releases (falling back to tags) every hour; when a newer version exists, an admin-only banner appears. Update by:
+Set `CMS_VERSION` to your deployed version (default `1.2.0`). The admin panel compares it with the newest GitHub Release (falling back to tags; cached for 6 h) and shows an admin-only banner when a newer version exists.
 
-- **CLI** — `php artisan sgcore:update` (dry-run first with `--dry-run`).
-- **Panel** — set `CMS_UPDATER_ALLOW_APPLY=true` in `.env` on a host with `git` and `composer` available; the banner shows an "Apply update" button that requires typing the exact target version.
+On hosts that can write to the app directory, set `CMS_UPDATER_ALLOW_APPLY=true` to unlock the updater in **Configurações → Atualizações**:
 
-Both paths run inside maintenance mode, back up the DB when `mysqldump`/`pg_dump` is available, and roll back on failure. Never enable the button on shared hosting or without a filesystem backup.
+- **Check** — refresh the cache now; `sgcore:check-updates` does it daily at 04:00.
+- **Download package** — stores the release `.zip` in `storage/app/updates` and stops there (nothing is swapped). Works on shared hosting: no git/composer/node needed.
+- **Install** — applies the stored package: maintenance mode, in-place copy (keeping `.env`, `storage/`, `bootstrap/cache/` and the cPanel PHP handler block), `migrate --force`, `optimize:clear`. The `.zip` is deleted afterwards.
+- **Automatic updates** — three preferences saved in the DB (no `.env` edit): check, download and install. `sgcore:auto-update` runs hourly (needs the cron above) and only swaps files when install is enabled; it prefers the package and falls back to `git` on a clean clone when the release has no asset.
+
+CLI equivalents: `php artisan sgcore:update` (git, with `--dry-run`), `php artisan sgcore:auto-update --dry-run`, `php artisan sgcore:check-updates`.
+
+Both apply paths run inside maintenance mode and clear caches. The **git** path also backs up the database when `mysqldump`/`pg_dump` is available; the **package** path does not, so keep scheduled DB backups (section 6) before enabling auto-install.
 
 ### Upgrading an installation older than v1.0.1 (no updater yet)
 

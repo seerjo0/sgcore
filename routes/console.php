@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Core\Services\UpdatePolicy;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -10,16 +11,17 @@ Artisan::command('inspire', function () {
 
 // Keeps the admin "update available" banner fresh without a web request
 // touching GitHub. Requires the standard cron entry `* * * * * php artisan schedule:run`.
-Schedule::command('sgcore:check-updates')->dailyAt('04:00');
+// The panel preference ("check automatically") decides whether it runs.
+Schedule::command('sgcore:check-updates')
+    ->dailyAt('04:00')
+    ->when(fn (): bool => app(UpdatePolicy::class)->autoCheck());
 
-// Opt-in automatic update. Registers a schedule entry only when the operator
-// enabled it (CMS_UPDATER_AUTO=true). The command itself still requires
-// CMS_UPDATER_ALLOW_APPLY and delegates the swap to `sgcore:update --force`
-// (maintenance + backup + migrate + rollback). Needs cron `schedule:run`.
-if (config('cms.updater.auto.enabled')) {
-    Schedule::command('sgcore:auto-update')
-        ->hourly()
-        ->withoutOverlapping()
-        ->onOneServer()
-        ->runInBackground();
-}
+// Download/install job driven by the panel preferences. Registered always so the
+// toggles work without touching .env; the command exits early when auto-check is
+// off, downloads only when asked to and installs only when explicitly enabled.
+Schedule::command('sgcore:auto-update')
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground()
+    ->when(fn (): bool => app(UpdatePolicy::class)->autoCheck());

@@ -2,15 +2,18 @@
 
 namespace App\Modules\Core\Http\Controllers\Admin;
 
+use App\Modules\Core\Services\PackageApply;
 use App\Modules\Core\Services\PackageSource;
 use App\Modules\Core\Services\PackageUpdater;
 use App\Modules\Core\Services\Settings;
 use App\Modules\Core\Services\UpdateChecker;
+use App\Modules\Core\Services\UpdatePackageStore;
+use App\Modules\Core\Services\UpdatePolicy;
 use App\Modules\Core\Services\UpdateRunner;
+use App\Modules\Core\Support\Version;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
@@ -19,22 +22,33 @@ class UpdateController extends Controller
 {
     /**
      * The dedicated "Updates" admin page: current vs latest version, the
-     * automatic-updater status (and its last run), and manual apply actions.
+     * download/install actions for package-based installs, the automatic
+     * update policy and the manual apply actions.
      */
-    public function index(UpdateChecker $checker, Settings $settings): View
-    {
+    public function index(
+        UpdateChecker $checker,
+        Settings $settings,
+        UpdatePackageStore $store,
+        UpdatePolicy $policy,
+    ): View {
         $update = $checker->updateAvailable(mayFetch: false);
+        $current = $checker->currentVersion();
+        $stored = $store->current();
 
         return view('core::admin.updates.index', [
-            'current' => $checker->currentVersion(),
+            'current' => $current,
             'update' => $update,
             'releaseUrl' => is_array($update) ? ($update['url'] ?? null) : null,
             'packageAsset' => $checker->packageAsset($update),
+            'stored' => $stored,
+            'storedNewer' => $stored !== null && Version::isNewer((string) $stored['version'], $current),
             'updaterEnabled' => (bool) config('cms.updater.enabled'),
             'applyEnabled' => (bool) config('cms.updater.apply.enabled'),
             'packageEnabled' => (bool) config('cms.updater.apply.package', true),
             'downloadEnabled' => (bool) config('cms.updater.apply.download', true),
-            'autoEnabled' => (bool) config('cms.updater.auto.enabled'),
+            'autoCheck' => $policy->autoCheck(),
+            'autoDownload' => $policy->autoDownload(),
+            'autoInstall' => $policy->autoInstall(),
             'autoLast' => $settings->get('auto_update_last'),
             'repo' => (string) config('cms.updater.repository', 'seerjo0/sgcore'),
         ]);
@@ -73,6 +87,131 @@ class UpdateController extends Controller
         session(['update_dismissed' => (string) $request->input('tag')]);
 
         return back();
+    }
+
+    /**
+     * Save the automatic update policy (check / download / install).
+     */
+    public function settings(Request $request, UpdatePolicy $policy): RedirectResponse
+    {
+        if (! config('cms.updater.enabled')) {
+            return back()->with('error', __('updater.disabled'));
+        }
+
+        $data = $request->validate([
+            'auto_check' => ['nullable', 'boolean'],
+            'auto_download' => ['nullable', 'boolean'],
+            'auto_install' => ['nullable', 'boolean'],
+        ]);
+
+        $policy->save([
+            'auto_check' => (bool) ($data['auto_check'] ?? false),
+            'auto_download' => (bool) ($data['auto_download'] ?? false),
+            'auto_install' => (bool) ($data['auto_install'] ?? false),
+        ]);
+
+        return back()->with('status', __('updater.settings_saved'));
+    }
+
+    /**
+     * Download the release's package asset onto the shelf, without applying it.
+     */
+    public function download(
+        UpdateChecker $checker,
+        PackageSource $source,
+        UpdatePackageStore $store,
+    ): RedirectResponse {
+        if (! $this->canUsePackages()) {
+            return back()->with('error', __('updater.package_disabled'));
+        }
+
+        $update = $checker->updateAvailable(mayFetch: true);
+
+        if ($update === null) {
+            return back()->with('status', __('updater.up_to_date'));
+        }
+
+        $asset = $checker->packageAsset($update);
+
+        if ($asset === null) {
+            return back()->with('error', __('updater.package_no_asset'));
+        }
+
+        try {
+            $downloaded = $source->fetch($asset);
+        } catch (RuntimeException $e) {
+            return back()->with('error', __('updater.download_failed', ['message' => $e->getMessage()]));
+        }
+
+        try {
+            $stored = $store->store($downloaded['path'], $update['version'], (string) ($asset['name'] ?? ''));
+        } catch (RuntimeException $e) {
+            return back()->with('error', __('updater.download_failed', ['message' => $e->getMessage()]));
+        } finally {
+            @unlink($downloaded['path']);
+        }
+
+        return back()->with('success', __('updater.package_saved', [
+            'version' => $update['tag'],
+            'size' => number_format($stored['bytes'] / 1048576, 1, ',', '.').' MB',
+        ]));
+    }
+
+    /**
+     * Install the package previously downloaded onto the shelf.
+     */
+    public function install(
+        Request $request,
+        UpdateChecker $checker,
+        UpdatePackageStore $store,
+        PackageApply $apply,
+    ): RedirectResponse {
+        $request->validate(['confirm' => ['accepted']]);
+
+        if (! $this->canUsePackages()) {
+            return back()->with('error', __('updater.package_disabled'));
+        }
+
+        $stored = $store->current();
+
+        if ($stored === null) {
+            return back()->with('error', __('updater.package_none'));
+        }
+
+        if (! Version::isNewer((string) $stored['version'], $checker->currentVersion())) {
+            return back()->with('error', __('updater.package_not_newer', ['version' => $stored['version']]));
+        }
+
+        $path = (string) $stored['path'];
+
+        @set_time_limit(0);
+
+        try {
+            $apply->apply($path, $checker->currentVersion());
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', __('updater.apply_failed', ['message' => $e->getMessage()]));
+        }
+
+        $store->discard();
+
+        return redirect()
+            ->route('admin.dashboard')
+            ->with('success', __('updater.applied', ['version' => 'v'.$stored['version']]));
+    }
+
+    /**
+     * Delete the downloaded package from the shelf.
+     */
+    public function discardPackage(UpdatePackageStore $store): RedirectResponse
+    {
+        $removed = $store->discard();
+
+        return back()->with(
+            $removed ? 'status' : 'error',
+            $removed ? __('updater.package_discarded') : __('updater.package_none'),
+        );
     }
 
     /**
@@ -130,7 +269,7 @@ class UpdateController extends Controller
             'confirm' => ['required', 'string'],
         ]);
 
-        if (! config('cms.updater.apply.enabled') || ! config('cms.updater.apply.package', true)) {
+        if (! $this->canUsePackages()) {
             return back()->with('error', __('updater.package_disabled'));
         }
 
@@ -146,83 +285,32 @@ class UpdateController extends Controller
             return back()->with('error', __('updater.confirm_mismatch'));
         }
 
-        return $this->runPackageUpdate($updater, $file->getRealPath(), $checker, $info['version']);
-    }
-
-    /**
-     * Download the release's package asset and apply it (one-click, opt-in).
-     */
-    public function downloadPackage(
-        Request $request,
-        UpdateChecker $checker,
-        PackageUpdater $updater,
-        PackageSource $source,
-    ): RedirectResponse {
-        $data = $request->validate(['confirm' => ['required', 'string']]);
-
-        if (! config('cms.updater.apply.enabled')
-            || ! config('cms.updater.apply.package', true)
-            || ! config('cms.updater.apply.download', true)) {
-            return back()->with('error', __('updater.package_disabled'));
-        }
-
-        $update = $checker->updateAvailable(mayFetch: true);
-
-        if ($update === null) {
-            return back()->with('status', __('updater.up_to_date'));
-        }
-
-        if ((string) $data['confirm'] !== ($update['version'] ?? $update['tag'])) {
-            return back()->with('error', __('updater.confirm_mismatch'));
-        }
-
-        $asset = $checker->packageAsset($update);
-
-        if ($asset === null) {
-            return back()->with('error', __('updater.package_no_asset'));
-        }
-
-        try {
-            $downloaded = $source->fetch($asset);
-        } catch (RuntimeException $e) {
-            return back()->with('error', __('updater.apply_failed', ['message' => $e->getMessage()]));
-        }
-
-        try {
-            return $this->runPackageUpdate($updater, $downloaded['path'], $checker, $update['version']);
-        } finally {
-            @unlink($downloaded['path']);
-        }
+        return $this->runPackageUpdate($file->getRealPath(), $checker, $info['version']);
     }
 
     /**
      * Shared package apply flow: maintenance mode, in-place update, clear cache.
      */
-    private function runPackageUpdate(PackageUpdater $updater, string $zipPath, UpdateChecker $checker, string $newVersion): RedirectResponse
+    private function runPackageUpdate(string $zipPath, UpdateChecker $checker, string $newVersion): RedirectResponse
     {
         @set_time_limit(0);
 
-        $secret = bin2hex(random_bytes(8));
-        Artisan::call('down', ['--secret' => $secret, '--render' => 'errors::503']);
-
         try {
-            $updater->apply(
-                $zipPath,
-                base_path(),
-                (array) config('cms.packager.protected', ['.env', 'storage', 'bootstrap/cache']),
-                $checker->currentVersion(),
-            );
+            app(PackageApply::class)->apply($zipPath, $checker->currentVersion());
         } catch (Throwable $e) {
             report($e);
-            Artisan::call('up', ['--secret' => $secret]);
 
             return back()->with('error', __('updater.apply_failed', ['message' => $e->getMessage()]));
         }
 
-        Artisan::call('up', ['--secret' => $secret]);
-
         return redirect()
             ->route('admin.dashboard')
             ->with('success', __('updater.applied', ['version' => 'v'.$newVersion]));
+    }
+
+    private function canUsePackages(): bool
+    {
+        return (bool) config('cms.updater.apply.enabled')
+            && (bool) config('cms.updater.apply.package', true);
     }
 }

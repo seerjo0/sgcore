@@ -41,8 +41,18 @@ Route::middleware('can:manage-settings')->group(function (): void {
             ->middleware('throttle:2,15')
             ->name('atualizacoes.pacote');
 
-        Route::post('/atualizacoes/baixar', [UpdateController::class, 'downloadPackage'])
-            ->middleware('throttle:2,15')
+        Route::post('/atualizacoes/config', [UpdateController::class, 'settings'])
+            ->name('atualizacoes.config');
+
+        Route::post('/atualizacoes/baixar', [UpdateController::class, 'download'])
+            ->middleware('throttle:5,15')
             ->name('atualizacoes.baixar');
+
+        Route::post('/atualizacoes/instalar', [UpdateController::class, 'install'])
+            ->middleware('throttle:2,15')
+            ->name('atualizacoes.instalar');
+
+        Route::post('/atualizacoes/pacote/descartar', [UpdateController::class, 'discardPackage'])
+            ->name('atualizacoes.pacote.descartar');
     });
 });

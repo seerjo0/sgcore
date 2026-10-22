@@ -11,6 +11,20 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.2.0] — 2026-10-22
+
+Gerenciamento de atualizações no painel: baixar, instalar depois e automatizar. Sem migration nova.
+
+### Adicionado
+- **Gerenciamento de atualizações no painel**: a página *Configurações → Atualizações* agora separa **baixar** de **instalar**. O botão "Baixar pacote" guarda o `.zip` da Release em `storage/app/updates` (sem tocar no código), o card *Pacote de atualização* mostra versão, tamanho e data do download, com botões **Instalar agora** (confirmação por checkbox, entra em manutenção, extrai, roda migrations e limpa o cache) e **Descartar**. O envio manual de `.zip` continua disponível.
+- **Preferências de atualização automática** (gravadas em `settings`, grupo `updater`, sem editar `.env`): *verificar automaticamente*, *baixar o pacote automaticamente* e *instalar automaticamente* (instalar implica baixar). O agendador roda `sgcore:auto-update` de hora em hora e respeita as opções; a verificação diária (`sgcore:check-updates`, 04:00) também é desligada pela preferência. A instalação automática prefere o pacote — funciona em hospedagem compartilhada — e cai para o fluxo Git quando a Release não traz `.zip` e o host é um clone limpo.
+- Novos serviços `UpdatePackageStore` (prateleira de pacotes baixados), `UpdatePolicy` (preferências) e `PackageApply` (modo manutenção + `PackageUpdater`, compartilhado entre painel e agendador).
+
+### Alterado
+- `POST /admin/configuracoes/atualizacoes/baixar` passou a **apenas baixar** (antes baixava e aplicava de uma vez); a aplicação virou `POST /atualizacoes/instalar`, com `POST /atualizacoes/config` (preferências) e `POST /atualizacoes/pacote/descartar`.
+- `CMS_UPDATER_AUTO` continua valendo como **padrão inicial** do checkbox "instalar automaticamente"; depois disso quem manda é o painel.
+- Testes: 376 testes / 1547 asserções; Pint limpo.
+
 ## [1.1.0-r2] — 2026-10-22
 
 Revisão 2 da 1.1.0: correções na tela de Atualizações e na preservação da versão de PHP. Sem migration nova.
@@ -116,7 +130,8 @@ Primeira versão estável (v1) do sgcore: CMS modular e self-hosted, construído
 
 Histórico interno durante as Fases 1–9 (scaffold modular → auth → mídia/galerias → páginas/menus → engine de temas → config admin → slots → site/SEO → revisão final) — consolidado em `9d764f4` (2026-10-08). Não é uma release pública; listado apenas por rastreabilidade.
 
-[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.1.0-r2...HEAD
+[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.2.0
 [1.1.0-r2]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r2
 [1.1.0-r1]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r1
 [1.1.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0
