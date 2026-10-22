@@ -155,12 +155,41 @@ autorestart=true
 
 ## 5. Staying up to date
 
-Set `CMS_VERSION` to your deployed version (default `1.0.0`). The admin panel checks GitHub Releases (falling back to tags) every hour; when a newer version exists, an admin-only banner appears. Update by:
+Set `CMS_VERSION` to your deployed version (default `1.1.0`). The admin panel checks GitHub Releases (falling back to tags) every hour; when a newer version exists, an admin-only banner appears. Update by:
 
 - **CLI** — `php artisan sgcore:update` (dry-run first with `--dry-run`).
 - **Panel** — set `CMS_UPDATER_ALLOW_APPLY=true` in `.env` on a host with `git` and `composer` available; the banner shows an "Apply update" button that requires typing the exact target version.
 
 Both paths run inside maintenance mode, back up the DB when `mysqldump`/`pg_dump` is available, and roll back on failure. Never enable the button on shared hosting or without a filesystem backup.
+
+### Upgrading an installation older than v1.0.1 (no updater yet)
+
+The in-panel updater and `sgcore:update` only exist since **v1.0.1**. An installation bootstrapped from the v1.0.0 `public_html.zip` cannot update itself, so the first hop is manual. After that the panel handles the rest.
+
+**1. Back up first.** `mysqldump` the database and copy `.env` + `storage/` off the server. Without this, stop.
+
+**2. Download** `sgcore-<version>-public_html.zip` from the GitHub Release. The package ships `vendor/` (production) and `public/build`, so neither `composer` nor `npm` is needed on the server.
+
+**3. Extract over the install** (merge/overwrite — never delete the install first). It is safe by construction:
+
+| Path | Effect on extract |
+|---|---|
+| `.env` | not in the package — untouched |
+| `storage/` | only `.gitignore` placeholders ship — uploads/logs untouched |
+| `bootstrap/cache/` | `packages.php`/`services.php` caches are refreshed, nothing else |
+| `index.php`, `.htaccess`, `public/.htaccess` | **overwritten** — re-apply any local customizations afterwards |
+
+**4. Run the pending migrations.** With a shell:
+
+```bash
+cd /path/to/site && php artisan migrate --force && php artisan optimize:clear
+```
+
+Without a shell, the freshly extracted code already contains the updater: add `CMS_UPDATER_ALLOW_APPLY=true` to `.env`, open **Configurações → Atualizações → Atualização manual → Pacote .zip** and upload the same file. That path runs `migrate --force` and `optimize:clear` from inside Laravel (a one-off PHP script that calls the two commands, deleted right after, also works).
+
+Do this immediately after extracting: the v1.0.0 → v1.1.0 hop adds the `pages.builder_custom_css` column, and builder pages error until it exists.
+
+**5. Verify.** Admin → Configurações → Atualizações shows the current version and "up to date"; then open a builder page and the public site.
 
 ## 6. Backup
 
