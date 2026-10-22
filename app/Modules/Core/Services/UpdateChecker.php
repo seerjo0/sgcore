@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Services;
 
+use App\Modules\Core\Support\Version;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -47,7 +48,7 @@ class UpdateChecker
             return null;
         }
 
-        return version_compare($release['version'], $this->currentVersion(), '>') ? $release : null;
+        return Version::isNewer($release['version'], $this->currentVersion()) ? $release : null;
     }
 
     public function currentVersion(): string
@@ -267,7 +268,7 @@ class UpdateChecker
                 continue;
             }
 
-            if ($best === null || version_compare($version, $best['version'], '>')) {
+            if ($best === null || Version::isNewer($version, $best['version'])) {
                 $best = ['tag' => $tag, 'version' => $version];
             }
         }

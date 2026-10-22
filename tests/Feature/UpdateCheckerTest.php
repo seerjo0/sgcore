@@ -170,6 +170,25 @@ class UpdateCheckerTest extends TestCase
             ->assertDontSee(__('updater.banner_title'));
     }
 
+    public function test_offers_a_revision_of_the_current_version(): void
+    {
+        config(['cms.version' => '1.1.0']);
+        $this->fakeRelease(['tag_name' => 'v1.1.0-r1']);
+
+        $update = app(UpdateChecker::class)->updateAvailable();
+
+        $this->assertNotNull($update);
+        $this->assertSame('1.1.0-r1', $update['version']);
+    }
+
+    public function test_no_update_when_the_current_revision_is_the_latest(): void
+    {
+        config(['cms.version' => '1.1.0-r1']);
+        $this->fakeRelease(['tag_name' => 'v1.1.0-r1']);
+
+        $this->assertNull(app(UpdateChecker::class)->updateAvailable());
+    }
+
     public function test_falls_back_to_git_tags_when_no_release_exists(): void
     {
         config(['cms.updater.source' => 'auto']);
@@ -200,6 +219,20 @@ class UpdateCheckerTest extends TestCase
         ]);
 
         $this->assertSame('v9.9.9', app(UpdateChecker::class)->updateAvailable()['tag']);
+    }
+
+    public function test_tags_fallback_prefers_a_revision_over_its_base(): void
+    {
+        config(['cms.version' => '1.1.0', 'cms.updater.source' => 'tags']);
+
+        Http::fake([
+            'api.github.com/repos/*/tags*' => Http::response([
+                ['name' => 'v1.1.0'],
+                ['name' => 'v1.1.0-r1'],
+            ], 200),
+        ]);
+
+        $this->assertSame('1.1.0-r1', app(UpdateChecker::class)->updateAvailable()['version']);
     }
 
     public function test_apply_route_is_rejected_when_flag_disabled(): void

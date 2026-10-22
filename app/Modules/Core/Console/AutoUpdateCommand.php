@@ -5,6 +5,7 @@ namespace App\Modules\Core\Console;
 use App\Modules\Core\Services\Settings;
 use App\Modules\Core\Services\UpdateChecker;
 use App\Modules\Core\Services\UpdateRunner;
+use App\Modules\Core\Support\Version;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -47,7 +48,7 @@ class AutoUpdateCommand extends Command
 
         $current = $checker->currentVersion();
 
-        if (version_compare($latest['version'], $current, '<=')) {
+        if (! Version::isNewer($latest['version'], $current)) {
             $this->line("Auto-update: {$current} já é a versão mais recente.");
 
             return self::SUCCESS;

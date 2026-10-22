@@ -4,6 +4,7 @@ namespace App\Modules\Core\Console;
 
 use App\Modules\Core\Services\UpdateChecker;
 use App\Modules\Core\Services\UpdateRunner;
+use App\Modules\Core\Support\Version;
 use Illuminate\Console\Command;
 use RuntimeException;
 
@@ -73,7 +74,7 @@ class UpdateCommand extends Command
 
         $current = $checker->currentVersion();
 
-        if (version_compare($version, $current, '<=')) {
+        if (! Version::isNewer($version, $current)) {
             $this->warn("Nada a fazer: destino {$tag} ({$version}) não é mais novo que a versão atual ({$current}).");
 
             if (! $this->option('dry-run') && ! $this->option('force')) {
