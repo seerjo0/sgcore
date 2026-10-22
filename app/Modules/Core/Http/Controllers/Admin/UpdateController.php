@@ -60,7 +60,7 @@ class UpdateController extends Controller
             return back()->with('error', __('updater.check_failed', ['message' => $error]));
         }
 
-        return back()->with('status', __('updater.up_to_date', ['version' => $checker->currentVersion()]));
+        return back()->with('status', __('updater.up_to_date'));
     }
 
     /**
@@ -93,7 +93,7 @@ class UpdateController extends Controller
         $update = $checker->updateAvailable(mayFetch: true);
 
         if ($update === null) {
-            return back()->with('status', __('updater.up_to_date', ['version' => $checker->currentVersion()]));
+            return back()->with('status', __('updater.up_to_date'));
         }
 
         if ((string) $data['confirm'] !== $update['tag']) {
@@ -169,7 +169,7 @@ class UpdateController extends Controller
         $update = $checker->updateAvailable(mayFetch: true);
 
         if ($update === null) {
-            return back()->with('status', __('updater.up_to_date', ['version' => $checker->currentVersion()]));
+            return back()->with('status', __('updater.up_to_date'));
         }
 
         if ((string) $data['confirm'] !== ($update['version'] ?? $update['tag'])) {

@@ -13,26 +13,27 @@
             {{ __('updater.disabled') }}
         </div>
     @else
+        @if ($update)
+            <div class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                {{ __('updater.available', ['version' => $update['tag']]) }}
+            </div>
+        @else
+            <div class="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                {{ __('updater.up_to_date') }}
+            </div>
+        @endif
+
         <div class="grid gap-4 lg:grid-cols-2">
             {{-- Version --}}
             <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 class="mb-3 text-sm font-semibold text-slate-800">{{ __('updater.current') }}</h3>
-                <dl class="space-y-1 text-sm">
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500">{{ __('updater.current') }}</dt>
-                        <dd class="font-mono font-semibold">{{ $current }}</dd>
-                    </div>
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500">{{ __('updater.available') }}</dt>
-                        <dd class="font-mono font-semibold">
-                            @if ($update)
-                                {{ $update['tag'] }}
-                            @else
-                                <span class="text-slate-400">{{ __('updater.up_to_date', ['version' => $current]) }}</span>
-                            @endif
-                        </dd>
-                    </div>
-                </dl>
+                <p class="font-mono text-2xl font-semibold text-slate-900">{{ $current }}</p>
+                @if ($update)
+                    <p class="mt-1 text-sm text-slate-500">
+                        {{ __('updater.available_version') }}:
+                        <span class="font-mono font-semibold text-emerald-700">{{ $update['tag'] }}</span>
+                    </p>
+                @endif
                 <div class="mt-4 flex flex-wrap gap-2">
                     <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.verificar') }}">
                         @csrf
