@@ -88,8 +88,12 @@
 
             @can('manage-settings')
                 <a href="{{ route('admin.configuracoes.index') }}"
-                   class="block rounded px-3 py-2 {{ request()->routeIs('admin.configuracoes.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
+                   class="block rounded px-3 py-2 {{ request()->routeIs('admin.configuracoes.*', '!admin.configuracoes.atualizacoes.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
                     {{ __('nav.settings') }}
+                </a>
+                <a href="{{ route('admin.configuracoes.atualizacoes.index') }}"
+                   class="block rounded px-3 py-2 {{ request()->routeIs('admin.configuracoes.atualizacoes.*') ? 'bg-slate-700 text-white' : 'hover:bg-slate-800' }}">
+                    {{ __('nav.updates') }}
                 </a>
             @endcan
         </nav>

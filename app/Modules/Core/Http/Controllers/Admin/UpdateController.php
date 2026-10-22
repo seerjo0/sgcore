@@ -4,17 +4,42 @@ namespace App\Modules\Core\Http\Controllers\Admin;
 
 use App\Modules\Core\Services\PackageSource;
 use App\Modules\Core\Services\PackageUpdater;
+use App\Modules\Core\Services\Settings;
 use App\Modules\Core\Services\UpdateChecker;
 use App\Modules\Core\Services\UpdateRunner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
 
 class UpdateController extends Controller
 {
+    /**
+     * The dedicated "Updates" admin page: current vs latest version, the
+     * automatic-updater status (and its last run), and manual apply actions.
+     */
+    public function index(UpdateChecker $checker, Settings $settings): View
+    {
+        $update = $checker->updateAvailable(mayFetch: false);
+
+        return view('core::admin.updates.index', [
+            'current' => $checker->currentVersion(),
+            'update' => $update,
+            'releaseUrl' => is_array($update) ? ($update['url'] ?? null) : null,
+            'packageAsset' => $checker->packageAsset($update),
+            'updaterEnabled' => (bool) config('cms.updater.enabled'),
+            'applyEnabled' => (bool) config('cms.updater.apply.enabled'),
+            'packageEnabled' => (bool) config('cms.updater.apply.package', true),
+            'downloadEnabled' => (bool) config('cms.updater.apply.download', true),
+            'autoEnabled' => (bool) config('cms.updater.auto.enabled'),
+            'autoLast' => $settings->get('auto_update_last'),
+            'repo' => (string) config('cms.updater.repository', 'seerjo0/sgcore'),
+        ]);
+    }
+
     /**
      * Force-refresh the cached release info and report the outcome. Does not
      * apply anything — this is a read-only check.

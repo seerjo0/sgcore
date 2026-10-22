@@ -23,6 +23,9 @@ Route::middleware('can:manage-settings')->group(function (): void {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::post('/', [SettingsController::class, 'update'])->name('update');
 
+        Route::get('/atualizacoes', [UpdateController::class, 'index'])
+            ->name('atualizacoes.index');
+
         Route::post('/atualizacoes/verificar', [UpdateController::class, 'check'])
             ->middleware('throttle:10,1')
             ->name('atualizacoes.verificar');
