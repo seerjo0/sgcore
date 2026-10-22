@@ -125,11 +125,12 @@ return [
     |
     | Fonte única da versão em execução, comparada com o último Release do
     | GitHub para o aviso de atualização. Sobrescreva por ambiente com
-    | CMS_VERSION (deixe bater com a tag do release, ex.: 1.2.0).
+    | CMS_VERSION (deixe bater com a tag do release, ex.: 1.2.0). Uma revisão
+    | reempacotada da mesma versão usa o sufixo -rN (ex.: 1.1.0-r1).
     |
     */
 
-    'version' => env('CMS_VERSION', '1.1.0'),
+    'version' => env('CMS_VERSION', '1.1.0-r1'),
 
     /*
     |--------------------------------------------------------------------------

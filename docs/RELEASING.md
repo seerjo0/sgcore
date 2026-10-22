@@ -12,11 +12,13 @@ We follow [SemVer](https://semver.org/lang/pt-BR/). The tag is `vMAJOR.MINOR.PAT
 - **MINOR** — new features, backward-compatible.
 - **PATCH** — bug fixes and security, backward-compatible.
 
+**Revisions** — a re-release of an already published version that carries only fixes or packaging changes (no new feature, no schema change) may use the `-rN` suffix: `1.1.0-r1`, `1.1.0-r2`. It is a revision, **not** a pre-release: `1.1.0 < 1.1.0-r1 < 1.1.0-r2 < 1.1.1`, which is what `App\Modules\Core\Support\Version` implements (PHP's `version_compare()` would rank it the other way around).
+
 ## Pre-flight
 
 1. `git status` — clean tree (no uncommitted changes).
 2. `vendor/bin/pint --test` — must be `result: passed`.
-3. `php artisan test` — **all green** (currently 300 tests / 1221 assertions).
+3. `php artisan test` — **all green** (currently 355 tests / 1457 assertions).
 4. `npm run build` — no errors, latest `public/build/manifest.json` committed if the app serves hashed assets directly.
 5. `CHANGELOG.md` — the version you're cutting must have a section under "Unreleased" that you're moving into a dated section.
 6. `config('cms.version')` — set to the new version (`app/Modules/Core/config/cms.php` `'version' => env('CMS_VERSION', 'X.Y.Z')`). Bump the default there.

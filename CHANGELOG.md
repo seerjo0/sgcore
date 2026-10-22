@@ -11,6 +11,17 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.1.0-r1] — 2026-10-22
+
+Revisão 1 da 1.1.0: correção de navegação no painel. Reempacotada sem mudanças de schema.
+
+### Corrigido
+- **Barra lateral destacava "Configurações" e "Atualizações" ao mesmo tempo**: o link de Configurações usava `request()->routeIs('admin.configuracoes.*', '!admin.configuracoes.atualizacoes.*')`, mas `routeIs()` não interpreta `!` como negação — o segundo padrão era comparado literalmente e nunca casava, então `admin.configuracoes.*` continuava valendo na página de Atualizações. Agora é `routeIs('admin.configuracoes.*') && ! routeIs('admin.configuracoes.atualizacoes.*')`, coberto por testes que inspecionam a classe ativa de cada link.
+
+### Alterado
+- **Comparação de versões ciente de revisão**: novo `App\Modules\Core\Support\Version`, usado pelo verificador de atualizações, pelo `sgcore:update` e pelo `sgcore:auto-update`. O `version_compare()` do PHP trata `1.1.0-r1` como *anterior* a `1.1.0` (qualificador desconhecido = pré-release), o que faria a revisão nunca ser oferecida; agora `1.1.0 < 1.1.0-r1 < 1.1.0-r2 < 1.1.1`.
+- **Suíte**: 355 testes / 1457 asserções; Pint limpo.
+
 ## [1.1.0] — 2026-10-22
 
 ### Adicionado
@@ -96,7 +107,8 @@ Primeira versão estável (v1) do sgcore: CMS modular e self-hosted, construído
 
 Histórico interno durante as Fases 1–9 (scaffold modular → auth → mídia/galerias → páginas/menus → engine de temas → config admin → slots → site/SEO → revisão final) — consolidado em `9d764f4` (2026-10-08). Não é uma release pública; listado apenas por rastreabilidade.
 
-[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.1.0-r1...HEAD
+[1.1.0-r1]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r1
 [1.1.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0
 [1.0.1]: https://github.com/seerjo0/sgcore/releases/tag/v1.0.1
 [1.0.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.0.0
