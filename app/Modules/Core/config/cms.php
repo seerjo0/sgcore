@@ -169,6 +169,14 @@ return [
             'download' => env('CMS_UPDATER_ALLOW_DOWNLOAD', true),
             'download_timeout' => (int) env('CMS_UPDATER_DOWNLOAD_TIMEOUT', 120),
         ],
+
+        // Atualização automática agendada (sgcore:auto-update). Exige opt-in
+        // duplo: além de CMS_UPDATER_ALLOW_APPLY=true, precisa de
+        // CMS_UPDATER_AUTO=true. Só faz sentido em instalações via Git com
+        // git/composer no PATH — instalações via .zip não suportam auto-update.
+        'auto' => [
+            'enabled' => env('CMS_UPDATER_AUTO', false),
+        ],
     ],
 
     /*

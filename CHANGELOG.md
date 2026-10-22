@@ -4,6 +4,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
+### Adicionado
+- **Atualização automática opt-in** (`sgcore:auto-update`): comando agendável que consulta o GitHub, e — só quando há versão mais nova — delega ao `sgcore:update --force` (mesma cadeia segura: manutenção, backup do banco, `composer install --no-dev`, `migrate --force`, `optimize:clear` e rollback em falha). Exige opt-in duplo `CMS_UPDATER_AUTO=true` + `CMS_UPDATER_ALLOW_APPLY=true` e só faz sentido em instalação via Git (rejeita quando não é `git checkout` ou quando há bloqueios). Entrada no scheduler é registrada **só** com `CMS_UPDATER_AUTO=true` (horário, `withoutOverlapping`); último resultado gravado na setting `auto_update_last`. Flags do comando: `--dry-run`, `--no-backup`. 4 testes.
+
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).

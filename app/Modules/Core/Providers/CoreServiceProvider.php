@@ -4,6 +4,7 @@ namespace App\Modules\Core\Providers;
 
 use App\Models\User;
 use App\Modules\Auth\Enums\Role;
+use App\Modules\Core\Console\AutoUpdateCommand;
 use App\Modules\Core\Console\CheckUpdatesCommand;
 use App\Modules\Core\Console\InstallCommand;
 use App\Modules\Core\Console\PackageCommand;
@@ -69,6 +70,7 @@ class CoreServiceProvider extends ServiceProvider
             ServeCommand::class,
             CheckUpdatesCommand::class,
             UpdateCommand::class,
+            AutoUpdateCommand::class,
         ]);
 
         // Site-wide "update available" banner on the admin shell. This only
