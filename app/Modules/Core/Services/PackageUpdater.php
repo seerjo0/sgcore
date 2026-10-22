@@ -25,6 +25,19 @@ use ZipArchive;
 class PackageUpdater
 {
     /**
+     * cPanel/MultiPHP records the selected PHP version as an Apache handler
+     * block inside .htaccess. Packages ship their own rewrite rules there, so a
+     * blind overwrite silently rolls the domain back to the account default.
+     * These files cannot be `protected` (the rules must be updated), so the
+     * handler block is carried over explicitly instead.
+     */
+    private const PHP_HANDLER_FILES = ['.htaccess', 'public/.htaccess'];
+
+    private const CPANEL_HANDLER_START = '# php -- BEGIN cPanel-generated handler';
+
+    private const CPANEL_HANDLER_END = '# php -- END cPanel-generated handler';
+
+    /**
      * @param  (callable(string): int)|null  $commandRunner  runs an artisan command, returns exit code
      */
     public function __construct(private ?\Closure $commandRunner = null) {}
@@ -73,7 +86,11 @@ class PackageUpdater
                 throw new RuntimeException('Pacote incompleto: faltam artisan/vendor.');
             }
 
+            $handlers = $this->capturePhpHandlers($targetRoot);
+
             $copy = $this->copyTree($extractTo, $targetRoot, $protected);
+
+            $this->restorePhpHandlers($targetRoot, $handlers);
 
             $migrate = 0;
             $clear = 0;
@@ -219,6 +236,83 @@ class PackageUpdater
         }
 
         return ['copied' => $copied, 'skipped' => $skipped];
+    }
+
+    /**
+     * Handler blocks found in the running install, keyed by relative path.
+     *
+     * @return array<string,string>
+     */
+    private function capturePhpHandlers(string $root): array
+    {
+        $handlers = [];
+
+        foreach (self::PHP_HANDLER_FILES as $relative) {
+            $path = $root.'/'.str_replace('/', DIRECTORY_SEPARATOR, $relative);
+            $block = $this->extractPhpHandler(is_file($path) ? (string) file_get_contents($path) : '');
+
+            if ($block !== '') {
+                $handlers[$relative] = $block;
+            }
+        }
+
+        return $handlers;
+    }
+
+    /**
+     * Re-appends the captured handler after the package files were copied.
+     * A file that already carries a handler (future packages may ship one) is
+     * left alone.
+     *
+     * @param  array<string,string>  $handlers
+     */
+    private function restorePhpHandlers(string $root, array $handlers): void
+    {
+        foreach ($handlers as $relative => $block) {
+            $path = $root.'/'.str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+            if (! is_file($path)) {
+                continue;
+            }
+
+            $current = (string) file_get_contents($path);
+
+            if ($current === '' || str_contains($current, $block) || $this->extractPhpHandler($current) !== '') {
+                continue;
+            }
+
+            file_put_contents($path, rtrim($current)."\n\n".$block."\n");
+        }
+    }
+
+    /**
+     * cPanel wraps its directive in comment markers; other hosts only add a bare
+     * AddHandler/AddType line, which is kept verbatim as well.
+     */
+    private function extractPhpHandler(string $htaccess): string
+    {
+        if ($htaccess === '') {
+            return '';
+        }
+
+        $start = strpos($htaccess, self::CPANEL_HANDLER_START);
+
+        if ($start !== false) {
+            $end = strpos($htaccess, self::CPANEL_HANDLER_END, $start);
+            $end = $end === false ? strlen($htaccess) : $end + strlen(self::CPANEL_HANDLER_END);
+
+            return trim(substr($htaccess, $start, $end - $start));
+        }
+
+        $lines = [];
+
+        foreach (preg_split('/\R/', $htaccess) ?: [] as $line) {
+            if (preg_match('/^\s*(?:AddHandler|AddType)\s+\S*php\S*/i', $line) === 1) {
+                $lines[] = rtrim($line);
+            }
+        }
+
+        return trim(implode("\n", $lines));
     }
 
     /**

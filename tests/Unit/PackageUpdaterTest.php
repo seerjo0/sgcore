@@ -75,6 +75,45 @@ class PackageUpdaterTest extends TestCase
         $this->assertSame(['migrate --force', 'optimize:clear'], $this->commands);
     }
 
+    public function test_apply_keeps_the_cpanel_php_handler(): void
+    {
+        $block = implode("\n", [
+            '# php -- BEGIN cPanel-generated handler, do not edit',
+            '# Set the "ea-php85" package as the default "PHP" programming language.',
+            '<IfModule mime_module>',
+            '  AddHandler application/x-httpd-ea-php85___lsphp .php .php8 .phtml',
+            '</IfModule>',
+            '# php -- END cPanel-generated handler, do not edit',
+        ]);
+
+        file_put_contents($this->appRoot.'/.htaccess', "# regras antigas\n".$block."\n");
+
+        $this->updater()->apply($this->zip, $this->appRoot, ['.env', 'storage', 'bootstrap/cache'], '1.0.0');
+
+        $htaccess = (string) file_get_contents($this->appRoot.'/.htaccess');
+
+        $this->assertStringContainsString('sgcore package rules', $htaccess);
+        $this->assertStringContainsString('AddHandler application/x-httpd-ea-php85___lsphp', $htaccess);
+        $this->assertSame(2, substr_count($htaccess, 'cPanel-generated handler'));
+    }
+
+    public function test_apply_keeps_a_bare_php_handler_line(): void
+    {
+        mkdir($this->appRoot.'/public', 0777, true);
+        file_put_contents(
+            $this->appRoot.'/public/.htaccess',
+            "AddHandler application/x-httpd-alt-php85___lsphp .php\nRewriteEngine On\n"
+        );
+
+        $this->updater()->apply($this->zip, $this->appRoot, ['.env', 'storage', 'bootstrap/cache'], '1.0.0');
+
+        $htaccess = (string) file_get_contents($this->appRoot.'/public/.htaccess');
+
+        $this->assertStringContainsString('sgcore public rules', $htaccess);
+        $this->assertStringContainsString('AddHandler application/x-httpd-alt-php85___lsphp .php', $htaccess);
+        $this->assertSame(1, substr_count($htaccess, 'AddHandler'));
+    }
+
     public function test_rejects_wrong_package_name(): void
     {
         $this->makePackage('1.9.0', '8.3', 'wordpress');
@@ -117,6 +156,8 @@ class PackageUpdaterTest extends TestCase
         $zip->addFromString('composer.json', '{"name":"seerjo0/sgcore"}');
         $zip->addFromString('vendor/autoload.php', "<?php\n");
         $zip->addFromString('bootstrap/cache/should-not-land.php', "<?php\n");
+        $zip->addFromString('.htaccess', "# sgcore package rules\nRewriteRule ^ index.php [L]\n");
+        $zip->addFromString('public/.htaccess', "# sgcore public rules\nRewriteRule ^ index.php [L]\n");
 
         $zip->close();
     }
