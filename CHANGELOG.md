@@ -4,16 +4,18 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
-### Adicionado
-- **Atualização automática opt-in** (`sgcore:auto-update`): comando agendável que consulta o GitHub, e — só quando há versão mais nova — delega ao `sgcore:update --force` (mesma cadeia segura: manutenção, backup do banco, `composer install --no-dev`, `migrate --force`, `optimize:clear` e rollback em falha). Exige opt-in duplo `CMS_UPDATER_AUTO=true` + `CMS_UPDATER_ALLOW_APPLY=true` e só faz sentido em instalação via Git (rejeita quando não é `git checkout` ou quando há bloqueios). Entrada no scheduler é registrada **só** com `CMS_UPDATER_AUTO=true` (horário, `withoutOverlapping`); último resultado gravado na setting `auto_update_last`. Flags do comando: `--dry-run`, `--no-backup`. 4 testes.
-- **Página "Atualizações" no painel (barra lateral)**: `admin.configuracoes.atualizacoes.index` (rota GET, gate `manage-settings`) com card de versão (atual × disponível + link do Release + "Verificar"), card do **status do auto-update** (ligada/desligada, nota e o último resultado `auto_update_last`) e uma seção **"Atualização manual"** com as ações já existentes reaproveitadas — aplicar via Git (confirmação digitada), baixar o `.zip` da Release e enviar um `.zip` offline. Novo link `nav.updates` na sidebar. 3 testes.
-
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).
 - Feed RSS/Atom do blog.
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
+
+## [1.1.0] — 2026-10-22
+
+### Adicionado
+- **Atualização automática opt-in** (`sgcore:auto-update`): comando agendável que consulta o GitHub, e — só quando há versão mais nova — delega ao `sgcore:update --force` (mesma cadeia segura: manutenção, backup do banco, `composer install --no-dev`, `migrate --force`, `optimize:clear` e rollback em falha). Exige opt-in duplo `CMS_UPDATER_AUTO=true` + `CMS_UPDATER_ALLOW_APPLY=true` e só faz sentido em instalação via Git (rejeita quando não é `git checkout` ou quando há bloqueios). Entrada no scheduler é registrada **só** com `CMS_UPDATER_AUTO=true` (horário, `withoutOverlapping`); último resultado gravado na setting `auto_update_last`. Flags do comando: `--dry-run`, `--no-backup`. 4 testes.
+- **Página "Atualizações" no painel (barra lateral)**: `admin.configuracoes.atualizacoes.index` (rota GET, gate `manage-settings`) com card de versão (atual × disponível + link do Release + "Verificar"), card do **status do auto-update** (ligada/desligada, nota e o último resultado `auto_update_last`) e uma seção **"Atualização manual"** com as ações já existentes reaproveitadas — aplicar via Git (confirmação digitada), baixar o `.zip` da Release e enviar um `.zip` offline. Novo link `nav.updates` na sidebar. 3 testes.
 
 ## [1.0.1] — 2026-10-21
 
@@ -94,5 +96,7 @@ Primeira versão estável (v1) do sgcore: CMS modular e self-hosted, construído
 
 Histórico interno durante as Fases 1–9 (scaffold modular → auth → mídia/galerias → páginas/menus → engine de temas → config admin → slots → site/SEO → revisão final) — consolidado em `9d764f4` (2026-10-08). Não é uma release pública; listado apenas por rastreabilidade.
 
-[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0
+[1.0.1]: https://github.com/seerjo0/sgcore/releases/tag/v1.0.1
 [1.0.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.0.0
