@@ -26,27 +26,54 @@ class PackageApply
 
     private bool $maintenance = false;
 
-    public function __construct(private PackageUpdater $updater) {}
+    public function __construct(
+        private PackageUpdater $updater,
+        private ?PhpHandlerGuard $guard = null,
+    ) {}
 
     /**
+     * @param  (\Closure(array{stage:string,message:string,percent:int}):void)|null  $progress
      * @return array{from:string,to:string,copied:int,skipped:int,migrate:int,clear:int}
      */
-    public function apply(string $zipPath, string $from): array
+    public function apply(string $zipPath, string $from, ?\Closure $progress = null): array
     {
         if ($this->status()['busy']) {
             throw new RuntimeException('Já existe uma atualização em andamento.');
         }
 
+        $report = function (string $stage, string $message, int $percent) use ($progress): void {
+            $progress?->__invoke(['stage' => $stage, 'message' => $message, 'percent' => $percent]);
+        };
+
+        $report('prepare', 'Preparando a atualização…', 2);
+
         $this->prepare();
+
+        // Back up the host's PHP handler before any file is touched: a manual
+        // extract later can be repaired from this copy.
+        $this->guard()->remember(base_path());
+
+        $report('maintenance', 'Ativando o modo de manutenção…', 6);
+
         $this->enterMaintenance($from);
 
+        $report('maintenance', 'Site em manutenção. Aplicando o pacote…', 20);
+
         try {
-            return $this->updater->apply(
+            $result = $this->updater->apply(
                 $zipPath,
                 base_path(),
                 (array) config('cms.packager.protected', ['.env', 'storage', 'bootstrap/cache']),
                 $from,
+                true,
+                $progress,
             );
+
+            if ($this->guard()->restore(base_path()) !== []) {
+                $report('htaccess', 'Handler de PHP do cPanel restaurado.', 99);
+            }
+
+            return $result;
         } finally {
             $this->leaveMaintenance();
         }
@@ -106,6 +133,20 @@ class PackageApply
         return true;
     }
 
+    /**
+     * Put back a PHP handler wiped by a manual extraction. Returns the repaired
+     * paths (empty when nothing was missing).
+     *
+     * @return list<string>
+     */
+    public function repairPhpHandler(): array
+    {
+        $guard = $this->guard();
+        $guard->remember(base_path());
+
+        return $guard->restore(base_path());
+    }
+
     private function prepare(): void
     {
         // The browser may hang up (or the proxy may timeout) before the copy
@@ -128,7 +169,15 @@ class PackageApply
         ]));
 
         try {
-            Artisan::call('down', ['--render' => 'errors::503', '--retry' => 60]);
+            // `--render` needs an existing view; errors::503 lives in
+            // resources/views/errors since 1.2.2. Without it artisan prints an
+            // error and returns 1 without activating maintenance, so the exit
+            // code is checked instead of assumed.
+            $code = Artisan::call('down', ['--render' => 'errors::503', '--retry' => 60]);
+
+            if ($code !== 0 || ! is_file($this->downPath())) {
+                throw new RuntimeException('Não foi possível ativar o modo de manutenção.');
+            }
         } catch (Throwable $e) {
             $this->forgetLock();
 
@@ -163,6 +212,11 @@ class PackageApply
         }
 
         $this->forgetLock();
+    }
+
+    private function guard(): PhpHandlerGuard
+    {
+        return $this->guard ??= app(PhpHandlerGuard::class);
     }
 
     /**

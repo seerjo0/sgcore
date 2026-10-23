@@ -11,6 +11,23 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.2.2] — 2026-10-23
+
+Atualização acompanhada: progresso em tempo real no painel, página de manutenção própria e `.htaccess` que preserva o handler PHP do cPanel. Sem migration nova.
+
+### Adicionado
+- **Tela de progresso da atualização**: `GET /admin/configuracoes/atualizacoes/executar` abre um terminal no tema do painel (barra, percentual e log com carimbo de hora). O envio é `POST` na mesma URL e a resposta é NDJSON em streaming (`StreamedResponse`), com etapas de download, verificação, extração, cópia (percentual a cada ponto ou 1 s), merge do `.htaccess`, migrations e caches. Se a aba fechar, a atualização continua no servidor; ao terminar, a página redireciona sozinha. O formulário de instalação e o botão "Atualizar" agora levam para essa tela.
+- **Página de manutenção temática** (`resources/views/errors/503.blade.php`): 503 em português, com recado, tempo estimado e links para tentar de novo e para o painel. É a view usada por `artisan down --render=errors::503`.
+- **Progresso no download**: `PackageSource::fetch()` informa bytes recebidos/total via callback do Guzzle.
+
+### Corrigido
+- **A manutenção não era ativada**: `artisan down --render=errors::503` falhava com código 1 porque a view `errors::503` não existia, e a falha passava batido — o site ficava no ar durante a cópia. A view existe agora e `PackageApply::enterMaintenance()` verifica o código de saída e a criação de `storage/framework/down`, abortando com mensagem clara se não der certo.
+- **Atualização por File Manager apagava o PHP do cPanel**: extrair o pacote sobrescrevia o `.htaccess` e o site voltava a usar o PHP padrão da hospedagem. O `.htaccess` da raiz passa a ser gerado entre `# BEGIN sgcore` e `# END sgcore`, e o updater substitui **somente esse bloco**, mantendo o `# php -- BEGIN cPanel-generated handler` e qualquer regra do usuário. Um guardião (`PhpHandlerGuard`) guarda o handler em `storage/framework/php-handlers.json` e o reaproveita se o arquivo for sobrescrito; a página de Atualizações também repara sozinha ao abrir.
+- **`.htaccess` legado (sem marcadores)**: o merge remove apenas as regras antigas do sgcore (a partir dos cabeçalhos conhecidos) e re-anexa o handler, sem duplicar `RewriteRule` a cada atualização.
+
+### Nota
+- O salto **1.2.1 → 1.2.2** já roda o updater corrigido da 1.2.1 e pode ser feito pelo painel, agora com progresso. Depois de atualizar, confira no File Manager se o bloco `# php -- BEGIN cPanel-generated handler` continua no `.htaccess` da raiz.
+
 ## [1.2.1] — 2026-10-22
 
 Correções no updater depois do 503 ao atualizar pela primeira vez com a 1.2.0. Sem migration nova.
@@ -143,7 +160,8 @@ Primeira versão estável (v1) do sgcore: CMS modular e self-hosted, construído
 
 Histórico interno durante as Fases 1–9 (scaffold modular → auth → mídia/galerias → páginas/menus → engine de temas → config admin → slots → site/SEO → revisão final) — consolidado em `9d764f4` (2026-10-08). Não é uma release pública; listado apenas por rastreabilidade.
 
-[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/seerjo0/sgcore/releases/tag/v1.2.2
 [1.2.1]: https://github.com/seerjo0/sgcore/releases/tag/v1.2.1
 [1.2.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.2.0
 [1.1.0-r2]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r2

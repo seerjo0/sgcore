@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Modules\Core\Services\HtaccessRules;
 use App\Modules\Core\Services\PackageUpdater;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -114,6 +115,56 @@ class PackageUpdaterTest extends TestCase
         $this->assertSame(1, substr_count($htaccess, 'AddHandler'));
     }
 
+    public function test_keeps_everything_outside_the_marked_block(): void
+    {
+        $existing = HtaccessRules::BEGIN."\n# rules from 1.2.0\nRewriteRule ^ old [L]\n".HtaccessRules::END."\n\n"
+            ."# php -- BEGIN cPanel-generated handler, do not edit\n"
+            ."AddHandler application/x-httpd-ea-php85___lsphp .php\n"
+            ."# php -- END cPanel-generated handler, do not edit\n\n"
+            ."# minha regra\nRedirect 301 /velho /novo\n";
+
+        file_put_contents($this->appRoot.'/.htaccess', $existing);
+
+        $this->updater()->apply($this->zip, $this->appRoot, ['.env', 'storage', 'bootstrap/cache'], '1.0.0');
+
+        $htaccess = (string) file_get_contents($this->appRoot.'/.htaccess');
+
+        $this->assertStringNotContainsString('RewriteRule ^ old [L]', $htaccess);
+        $this->assertStringContainsString('RewriteRule ^ index.php [L]', $htaccess);
+        $this->assertStringContainsString('AddHandler application/x-httpd-ea-php85___lsphp .php', $htaccess);
+        $this->assertStringContainsString('# minha regra'."\n".'Redirect 301 /velho /novo', $htaccess);
+        $this->assertSame(1, substr_count($htaccess, HtaccessRules::BEGIN));
+    }
+
+    public function test_reports_progress_while_copying(): void
+    {
+        $events = [];
+
+        $this->updater()->apply(
+            $this->zip,
+            $this->appRoot,
+            ['.env', 'storage', 'bootstrap/cache'],
+            '1.0.0',
+            true,
+            function (array $event) use (&$events): void {
+                $events[] = $event;
+            },
+        );
+
+        $stages = array_column($events, 'stage');
+        $percents = array_column($events, 'percent');
+
+        $this->assertSame('manifest', $stages[0]);
+        $this->assertContains('files', $stages);
+        $this->assertContains('migrate', $stages);
+        $this->assertSame('done', $stages[array_key_last($stages)]);
+        $this->assertSame(100, $percents[array_key_last($percents)]);
+
+        $sorted = $percents;
+        sort($sorted);
+        $this->assertSame($sorted, $percents);
+    }
+
     public function test_rejects_wrong_package_name(): void
     {
         $this->makePackage('1.9.0', '8.3', 'wordpress');
@@ -156,8 +207,8 @@ class PackageUpdaterTest extends TestCase
         $zip->addFromString('composer.json', '{"name":"seerjo0/sgcore"}');
         $zip->addFromString('vendor/autoload.php', "<?php\n");
         $zip->addFromString('bootstrap/cache/should-not-land.php', "<?php\n");
-        $zip->addFromString('.htaccess', "# sgcore package rules\nRewriteRule ^ index.php [L]\n");
-        $zip->addFromString('public/.htaccess', "# sgcore public rules\nRewriteRule ^ index.php [L]\n");
+        $zip->addFromString('.htaccess', HtaccessRules::wrap("# sgcore package rules\nRewriteRule ^ index.php [L]"));
+        $zip->addFromString('public/.htaccess', HtaccessRules::wrap("# sgcore public rules\nRewriteRule ^ index.php [L]"));
 
         $zip->close();
     }

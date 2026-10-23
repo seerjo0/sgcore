@@ -19,23 +19,17 @@ use ZipArchive;
  * under the manifest's `protected` list (.env, storage, bootstrap/cache) are
  * never overwritten, so configuration and user data survive.
  *
+ * .htaccess is a special case: the package ships its rewrite rules, but the
+ * live file also holds host-generated directives (cPanel's PHP handler). Those
+ * files are merged block by block instead of copied over.
+ *
  * The command runner is injectable so the whole flow can be tested without a
  * real migration; the default runner calls Artisan in-process.
  */
 class PackageUpdater
 {
-    /**
-     * cPanel/MultiPHP records the selected PHP version as an Apache handler
-     * block inside .htaccess. Packages ship their own rewrite rules there, so a
-     * blind overwrite silently rolls the domain back to the account default.
-     * These files cannot be `protected` (the rules must be updated), so the
-     * handler block is carried over explicitly instead.
-     */
-    private const PHP_HANDLER_FILES = ['.htaccess', 'public/.htaccess'];
-
-    private const CPANEL_HANDLER_START = '# php -- BEGIN cPanel-generated handler';
-
-    private const CPANEL_HANDLER_END = '# php -- END cPanel-generated handler';
+    /** Files that mix project rules with host (cPanel) directives. */
+    private const HTACCESS_FILES = ['.htaccess', 'public/.htaccess'];
 
     /**
      * @param  (callable(string): int)|null  $commandRunner  runs an artisan command, returns exit code
@@ -61,11 +55,22 @@ class PackageUpdater
     /**
      * Apply the package onto $targetRoot.
      *
+     * `$progress` receives one array per step: ['stage' => string, 'message' =>
+     * string, 'percent' => int]. The package flow uses it to stream the terminal
+     * on the Updates page; leaving it null keeps the previous silent behaviour.
+     *
      * @param  list<string>  $protected  relative paths never to overwrite
+     * @param  (\Closure(array{stage:string,message:string,percent:int}):void)|null  $progress
      * @return array{from:string,to:string,copied:int,skipped:int,migrate:int,clear:int}
      */
-    public function apply(string $zipPath, string $targetRoot, array $protected, string $currentVersion, bool $runCommands = true): array
+    public function apply(string $zipPath, string $targetRoot, array $protected, string $currentVersion, bool $runCommands = true, ?\Closure $progress = null): array
     {
+        $report = function (string $stage, string $message, int $percent, array $extra = []) use ($progress): void {
+            $progress?->__invoke(['stage' => $stage, 'message' => $message, 'percent' => $percent] + $extra);
+        };
+
+        $report('manifest', 'Lendo o manifesto do pacote…', 22);
+
         $manifest = $this->readManifest($zipPath);
 
         if (($manifest['name'] ?? null) !== 'sgcore') {
@@ -75,9 +80,13 @@ class PackageUpdater
         $newVersion = ltrim((string) ($manifest['version'] ?? ''), 'vV');
         $phpMin = (string) ($manifest['php_min'] ?? '8.3');
 
+        $report('verify', 'Conferindo requisitos (PHP '.$phpMin.'+)…', 26);
+
         if ($phpMin !== '' && version_compare(PHP_VERSION, $phpMin, '<')) {
             throw new RuntimeException("Este pacote exige PHP {$phpMin}+. O servidor tem ".PHP_VERSION.'.');
         }
+
+        $report('extract', 'Extraindo o pacote em área temporária…', 30);
 
         $extractTo = $this->extract($zipPath);
 
@@ -86,24 +95,36 @@ class PackageUpdater
                 throw new RuntimeException('Pacote incompleto: faltam artisan/vendor.');
             }
 
-            $handlers = $this->capturePhpHandlers($targetRoot);
+            // Read the live .htaccess files before the copy overwrites them.
+            $htaccess = $this->readHtaccesses($targetRoot);
+            $total = $this->countFiles($zipPath);
 
-            $copy = $this->copyTree($extractTo, $targetRoot, $protected);
+            $report('files', 'Copiando arquivos…', 34, ['total' => $total]);
 
-            $this->restorePhpHandlers($targetRoot, $handlers);
+            $copy = $this->copyTree($extractTo, $targetRoot, $protected, $total, $report);
+
+            $report('htaccess', 'Preservando o .htaccess e o PHP do cPanel…', 84);
+
+            $this->mergeHtaccesses($targetRoot, $htaccess);
 
             $migrate = 0;
             $clear = 0;
 
             if ($runCommands) {
+                $report('migrate', 'Rodando migrations pendentes…', 88);
+
                 $migrate = ($this->runner())('migrate --force');
 
                 if ($migrate !== 0) {
                     throw new RuntimeException('As migrations falharam após copiar os arquivos (exit '.$migrate.').');
                 }
 
+                $report('cache', 'Limpando caches da aplicação…', 95);
+
                 $clear = ($this->runner())('optimize:clear');
             }
+
+            $report('done', 'Arquivos e banco atualizados.', 100);
 
             return [
                 'from' => $currentVersion,
@@ -156,6 +177,30 @@ class PackageUpdater
         return $manifest;
     }
 
+    /** Files (directories excluded) the package will write. */
+    private function countFiles(string $zipPath): int
+    {
+        $zip = new ZipArchive;
+
+        if ($zip->open($zipPath) !== true) {
+            return 0;
+        }
+
+        $total = 0;
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = (string) $zip->getNameIndex($i);
+
+            if (! str_ends_with($name, '/')) {
+                $total++;
+            }
+        }
+
+        $zip->close();
+
+        return $total;
+    }
+
     private function extract(string $zipPath): string
     {
         $temp = sys_get_temp_dir().'/sgcore-pkg-'.bin2hex(random_bytes(6));
@@ -178,7 +223,6 @@ class PackageUpdater
         return $temp;
     }
 
-    /** @param array<string,int> $counters */
     private function looksLikeApp(string $dir): bool
     {
         return is_file($dir.'/artisan')
@@ -188,12 +232,15 @@ class PackageUpdater
 
     /**
      * @param  list<string>  $protected
+     * @param  (\Closure(array{stage:string,message:string,percent:int}):void)  $report
      * @return array{copied:int,skipped:int}
      */
-    private function copyTree(string $src, string $dest, array $protected): array
+    private function copyTree(string $src, string $dest, array $protected, int $total, \Closure $report): array
     {
         $copied = 0;
         $skipped = 0;
+        $lastPercent = -1;
+        $lastTick = 0;
 
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($src, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -233,86 +280,67 @@ class PackageUpdater
             }
 
             $copied++;
+
+            // 34% -> 82% while copying; report on percent change or every 200
+            // files so the stream stays light (6.800 files per package).
+            $percent = $total > 0 ? 34 + (int) floor(48 * $copied / $total) : 34;
+
+            if ($percent !== $lastPercent || (time() - $lastTick) >= 1) {
+                $lastPercent = $percent;
+                $lastTick = time();
+
+                $report('files', "Copiando arquivos… {$copied}".($total > 0 ? "/{$total}" : ''), $percent, [
+                    'copied' => $copied,
+                    'total' => $total,
+                ]);
+            }
         }
 
         return ['copied' => $copied, 'skipped' => $skipped];
     }
 
     /**
-     * Handler blocks found in the running install, keyed by relative path.
+     * Live contents of the .htaccess files, keyed by relative path.
      *
      * @return array<string,string>
      */
-    private function capturePhpHandlers(string $root): array
+    private function readHtaccesses(string $root): array
     {
-        $handlers = [];
+        $files = [];
 
-        foreach (self::PHP_HANDLER_FILES as $relative) {
+        foreach (self::HTACCESS_FILES as $relative) {
             $path = $root.'/'.str_replace('/', DIRECTORY_SEPARATOR, $relative);
-            $block = $this->extractPhpHandler(is_file($path) ? (string) file_get_contents($path) : '');
 
-            if ($block !== '') {
-                $handlers[$relative] = $block;
+            if (is_file($path)) {
+                $files[$relative] = (string) file_get_contents($path);
             }
         }
 
-        return $handlers;
+        return $files;
     }
 
     /**
-     * Re-appends the captured handler after the package files were copied.
-     * A file that already carries a handler (future packages may ship one) is
-     * left alone.
+     * Replace only the sgcore block of each .htaccess: cPanel's handler and any
+     * custom directive outside the markers stay byte for byte.
      *
-     * @param  array<string,string>  $handlers
+     * @param  array<string,string>  $existing
      */
-    private function restorePhpHandlers(string $root, array $handlers): void
+    private function mergeHtaccesses(string $root, array $existing): void
     {
-        foreach ($handlers as $relative => $block) {
+        foreach ($existing as $relative => $before) {
             $path = $root.'/'.str_replace('/', DIRECTORY_SEPARATOR, $relative);
 
             if (! is_file($path)) {
                 continue;
             }
 
-            $current = (string) file_get_contents($path);
+            $incoming = (string) file_get_contents($path);
+            $merged = HtaccessRules::merge($before, $incoming);
 
-            if ($current === '' || str_contains($current, $block) || $this->extractPhpHandler($current) !== '') {
-                continue;
-            }
-
-            file_put_contents($path, rtrim($current)."\n\n".$block."\n");
-        }
-    }
-
-    /**
-     * cPanel wraps its directive in comment markers; other hosts only add a bare
-     * AddHandler/AddType line, which is kept verbatim as well.
-     */
-    private function extractPhpHandler(string $htaccess): string
-    {
-        if ($htaccess === '') {
-            return '';
-        }
-
-        $start = strpos($htaccess, self::CPANEL_HANDLER_START);
-
-        if ($start !== false) {
-            $end = strpos($htaccess, self::CPANEL_HANDLER_END, $start);
-            $end = $end === false ? strlen($htaccess) : $end + strlen(self::CPANEL_HANDLER_END);
-
-            return trim(substr($htaccess, $start, $end - $start));
-        }
-
-        $lines = [];
-
-        foreach (preg_split('/\R/', $htaccess) ?: [] as $line) {
-            if (preg_match('/^\s*(?:AddHandler|AddType)\s+\S*php\S*/i', $line) === 1) {
-                $lines[] = rtrim($line);
+            if ($merged !== $incoming) {
+                file_put_contents($path, $merged);
             }
         }
-
-        return trim(implode("\n", $lines));
     }
 
     /**

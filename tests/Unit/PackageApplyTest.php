@@ -39,6 +39,24 @@ class PackageApplyTest extends TestCase
         $this->assertFileDoesNotExist($this->lock());
     }
 
+    public function test_the_site_is_down_while_the_package_is_being_applied(): void
+    {
+        $updater = Mockery::mock(PackageUpdater::class);
+        $updater->shouldReceive('apply')->once()->andReturnUsing(function (): array {
+            $this->assertFileExists($this->down());
+            $this->assertFileExists($this->lock());
+
+            return [
+                'from' => '1.1.0', 'to' => '1.2.0', 'copied' => 1, 'skipped' => 0, 'migrate' => 0, 'clear' => 1,
+            ];
+        });
+
+        (new PackageApply($updater))->apply('/tmp/pkg.zip', '1.1.0');
+
+        $this->assertFileDoesNotExist($this->down());
+        $this->assertFileDoesNotExist($this->lock());
+    }
+
     public function test_leaves_maintenance_mode_when_the_update_throws(): void
     {
         $updater = Mockery::mock(PackageUpdater::class);
@@ -108,7 +126,12 @@ class PackageApplyTest extends TestCase
 
     private function clean(): void
     {
-        File::delete([$this->down(), $this->lock(), storage_path('framework/maintenance.php')]);
+        File::delete([
+            $this->down(),
+            $this->lock(),
+            storage_path('framework/maintenance.php'),
+            storage_path('framework/php-handlers.json'),
+        ]);
     }
 
     private function down(): string

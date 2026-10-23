@@ -102,10 +102,12 @@ PHP;
     private function writeRewriteRules(string $dir): void
     {
         $htaccess = <<<'HTTPEX'
+# BEGIN sgcore
 # sgcore shared-hosting rules (Apache / LiteSpeed).
 # Only index.php is executed; unknown paths are routed to it. Everything that is
 # a real file under ./public or ./build is served directly. No directory listing,
 # no dotfiles, no direct access to app/, vendor/, storage/, bootstrap/.
+# The updater replaces only this block; keep custom rules outside it.
 
 Options -Indexes -MultiViews
 
@@ -129,6 +131,7 @@ Options -Indexes -MultiViews
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
 </IfModule>
+# END sgcore
 HTTPEX;
 
         file_put_contents($dir.'/.htaccess', $htaccess."\n");

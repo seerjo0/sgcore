@@ -50,6 +50,12 @@ Route::middleware('can:manage-settings')->group(function (): void {
         Route::post('/atualizacoes/instalar', [UpdateController::class, 'install'])
             ->name('atualizacoes.instalar');
 
+        Route::get('/atualizacoes/executar', [UpdateController::class, 'progress'])
+            ->name('atualizacoes.executar');
+
+        Route::post('/atualizacoes/executar', [UpdateController::class, 'run'])
+            ->name('atualizacoes.executar.iniciar');
+
         Route::post('/atualizacoes/pacote/descartar', [UpdateController::class, 'discardPackage'])
             ->name('atualizacoes.pacote.descartar');
     });

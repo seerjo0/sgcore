@@ -63,6 +63,12 @@
                             {{ __('updater.view_release') }}
                         </a>
                     @endif
+                    @if ($update && $applyEnabled && $packageEnabled && $downloadEnabled)
+                        <a href="{{ route('admin.configuracoes.atualizacoes.executar', ['modo' => 'atualizar']) }}"
+                           class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500">
+                            {{ __('updater.progress_open') }}
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -142,17 +148,13 @@
 
                     <div class="mt-3 flex flex-wrap items-end gap-3">
                         @if ($storedNewer && $applyEnabled && $packageEnabled)
-                            <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.instalar') }}" class="space-y-2">
-                                @csrf
+                            <div class="space-y-2">
                                 <p class="text-xs text-slate-500">{{ __('updater.package_install_warning') }}</p>
-                                <label class="flex items-center gap-2 text-xs text-slate-600">
-                                    <input type="checkbox" name="confirm" value="1" required class="rounded border-slate-300">
-                                    {{ __('updater.package_install_confirm') }}
-                                </label>
-                                <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+                                <a href="{{ route('admin.configuracoes.atualizacoes.executar', ['modo' => 'instalar']) }}"
+                                   class="inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
                                     {{ __('updater.package_install', ['version' => $stored['version']]) }}
-                                </button>
-                            </form>
+                                </a>
+                            </div>
                         @endif
 
                         <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.pacote.descartar') }}">

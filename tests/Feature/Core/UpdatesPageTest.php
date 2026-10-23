@@ -35,6 +35,7 @@ class UpdatesPageTest extends TestCase
             storage_path('framework/down'),
             storage_path('framework/update.lock'),
             storage_path('framework/maintenance.php'),
+            storage_path('framework/php-handlers.json'),
         ]);
 
         parent::tearDown();
@@ -369,6 +370,91 @@ class UpdatesPageTest extends TestCase
             ->assertSessionHas('status', __('updater.maintenance_recovered'));
 
         $this->assertFileDoesNotExist(storage_path('framework/down'));
+    }
+
+    public function test_the_progress_page_shows_the_terminal(): void
+    {
+        config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
+        $this->storePackage('1.1.0-r2');
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.configuracoes.atualizacoes.executar', ['modo' => 'instalar']))
+            ->assertOk()
+            ->assertSee('sgcore update', false)
+            ->assertSee('update-log', false)
+            ->assertSee('1.1.0-r2', false)
+            ->assertSee(route('admin.configuracoes.atualizacoes.executar.iniciar'), false);
+    }
+
+    public function test_the_progress_page_needs_a_package_to_install(): void
+    {
+        config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.configuracoes.atualizacoes.executar', ['modo' => 'instalar']))
+            ->assertRedirect(route('admin.configuracoes.atualizacoes.index'))
+            ->assertSessionHas('error', __('updater.package_none'));
+    }
+
+    public function test_the_stream_reports_progress_and_completion(): void
+    {
+        config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
+        $this->storePackage('1.1.0-r2');
+
+        $apply = Mockery::mock(PackageApply::class);
+        $apply->shouldReceive('apply')
+            ->once()
+            ->andReturnUsing(function (string $path, string $from, ?\Closure $progress = null): array {
+                $progress?->__invoke(['stage' => 'files', 'message' => 'Copiando arquivos… 10/20', 'percent' => 50]);
+
+                return [
+                    'from' => '1.1.0-r1', 'to' => '1.1.0-r2', 'copied' => 1, 'skipped' => 0, 'migrate' => 0, 'clear' => 1,
+                ];
+            });
+        $this->app->instance(PackageApply::class, $apply);
+
+        $response = $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.configuracoes.atualizacoes.executar.iniciar'), ['modo' => 'instalar']);
+
+        $response->assertOk();
+
+        $body = (string) $response->streamedContent();
+
+        $this->assertStringContainsString('Copiando arquivos', $body);
+        $this->assertStringContainsString('"percent":50', $body);
+        $this->assertStringContainsString('"done":true', $body);
+        $this->assertStringContainsString('"ok":true', $body);
+        $this->assertStringContainsString('v1.1.0-r2', $body);
+        $this->assertNull(app(UpdatePackageStore::class)->current());
+    }
+
+    public function test_the_stream_reports_a_failure_and_keeps_the_package(): void
+    {
+        config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
+        $this->storePackage('1.1.0-r2');
+
+        $apply = Mockery::mock(PackageApply::class);
+        $apply->shouldReceive('apply')->once()->andThrow(new \RuntimeException('disco cheio'));
+        $this->app->instance(PackageApply::class, $apply);
+
+        $response = $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.configuracoes.atualizacoes.executar.iniciar'), ['modo' => 'instalar']);
+
+        $body = (string) $response->streamedContent();
+
+        $this->assertStringContainsString('disco cheio', $body);
+        $this->assertStringContainsString('"ok":false', $body);
+        $this->assertFileDoesNotExist(storage_path('framework/down'));
+        $this->assertNotNull(app(UpdatePackageStore::class)->current());
+    }
+
+    public function test_the_503_page_is_themed_and_refreshes_itself(): void
+    {
+        $html = view('errors.503')->render();
+
+        $this->assertStringContainsString('http-equiv="refresh"', $html);
+        $this->assertStringContainsString(__('errors.maintenance_title'), $html);
+        $this->assertStringContainsString(__('errors.maintenance_admin'), $html);
     }
 
     private function storePackage(string $version): void
