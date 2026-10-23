@@ -18,7 +18,7 @@ We follow [SemVer](https://semver.org/lang/pt-BR/). The tag is `vMAJOR.MINOR.PAT
 
 1. `git status` — clean tree (no uncommitted changes).
 2. `vendor/bin/pint --test` — must be `result: passed`.
-3. `php artisan test` — **all green** (currently 376 tests / 1547 assertions).
+3. `php artisan test` — **all green** (currently 387 tests / 1590 assertions).
 4. `npm run build` — no errors, latest `public/build/manifest.json` committed if the app serves hashed assets directly.
 5. `CHANGELOG.md` — the version you're cutting must have a section under "Unreleased" that you're moving into a dated section.
 6. `config('cms.version')` — set to the new version (`app/Modules/Core/config/cms.php` `'version' => env('CMS_VERSION', 'X.Y.Z')`). Bump the default there.

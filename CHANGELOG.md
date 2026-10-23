@@ -11,6 +11,19 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.2.1] — 2026-10-22
+
+Correções no updater depois do 503 ao atualizar pela primeira vez com a 1.2.0. Sem migration nova.
+
+### Corrigido
+- **O site ficava em 503 depois de atualizar**: o `artisan up` era chamado com `--secret`, opção que o comando `up` não aceita. O artisan saía com erro e `storage/framework/down` ficava para trás — tanto no fluxo por pacote (`PackageApply`, usado pelo painel e pelo `sgcore:auto-update`) quanto no fluxo Git (`UpdateRunner`, usado por `sgcore:update`). Agora o `up` roda sem opções, dentro de um `finally`; se o artisan não subir, os arquivos de manutenção são removidos à mão.
+- **"Verificar" ignorava a rede**: a ação usava o cache de 6 h, então uma Release publicada depois da última consulta ficava invisível e o painel dizia "já está na última". A ação agora força a consulta. Falhas de rede/HTTP também deixaram de ser cacheadas (um 429 do GitHub travava a verificação por 6 h).
+- **429 na tela de Atualizações**: os limites viraram mensagens ("Muitas tentativas, aguarde X s") em vez da página de erro do Laravel. Baixar: 3/5 min; instalar/aplicar: 2/5 min; verificar: 5/min.
+- **Modo manutenção preso não precisava mais de FTP**: a página de Atualizações continua acessível durante a manutenção, libera sozinha um `down` sem atualização em andamento (sem lock) e ganhou o botão **Sair da manutenção**. Se o processo morrer por erro fatal, o `register_shutdown_function` tenta religar o site; `ignore_user_abort(true)` + `set_time_limit(0)` deixam a cópia terminar mesmo se o navegador abandonar a requisição. Um lock em `storage/framework/update.lock` impede duas atualizações simultâneas.
+
+### Nota
+- A atualização **1.2.0 → 1.2.1** ainda roda o updater da 1.2.0, que tem o bug do `--secret`. Se aplicar pelo painel, apague `storage/framework/down` (ou rode `php artisan up`) ao final; extração manual pelo File Manager continua sendo o caminho mais seguro nesse salto.
+
 ## [1.2.0] — 2026-10-22
 
 Gerenciamento de atualizações no painel: baixar, instalar depois e automatizar. Sem migration nova.
@@ -130,7 +143,8 @@ Primeira versão estável (v1) do sgcore: CMS modular e self-hosted, construído
 
 Histórico interno durante as Fases 1–9 (scaffold modular → auth → mídia/galerias → páginas/menus → engine de temas → config admin → slots → site/SEO → revisão final) — consolidado em `9d764f4` (2026-10-08). Não é uma release pública; listado apenas por rastreabilidade.
 
-[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/seerjo0/sgcore/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/seerjo0/sgcore/releases/tag/v1.2.1
 [1.2.0]: https://github.com/seerjo0/sgcore/releases/tag/v1.2.0
 [1.1.0-r2]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r2
 [1.1.0-r1]: https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r1

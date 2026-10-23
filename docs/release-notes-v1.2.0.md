@@ -16,7 +16,7 @@ Nova versão menor: o painel passou a **gerenciar** as atualizações, não apen
 2. `Configurações → Atualizações → Baixar pacote`, depois **Instalar agora**.
 3. Se o servidor estiver na 1.1.0-r1/r2, a tela ainda é a antiga: use **Baixar e atualizar** (ou envie o `.zip` em *Atualização manual*).
 
-**Se a página ficar em 503** depois de atualizar, o processo PHP foi interrompido no meio e o modo manutenção ficou preso — apague `storage/framework/down` (Gerenciador de Arquivos) ou rode `php artisan up`. O site volta na hora; confira `storage/logs/laravel.log` para a causa. Esta versão ainda não tem auto-recuperação nem botão "sair da manutenção" (entra na próxima).
+**Se a página ficar em 503** depois de atualizar, o processo PHP foi interrompido no meio e o modo manutenção ficou preso — apague `storage/framework/down` (Gerenciador de Arquivos) ou rode `php artisan up`. O site volta na hora; confira `storage/logs/laravel.log` para a causa. A v1.2.1 corrige a causa (o `artisan up` recebia `--secret`) e adiciona auto-recuperação e o botão "Sair da manutenção".
 
 **Extração manual** (File Manager): extraia por cima, rode `php artisan migrate --force` + `optimize:clear` se tiver terminal, e reaplique a versão do PHP no MultiPHP (extração manual substitui o `.htaccess`).
 

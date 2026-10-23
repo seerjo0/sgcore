@@ -155,11 +155,11 @@ autorestart=true
 
 ## 5. Staying up to date
 
-Set `CMS_VERSION` to your deployed version (default `1.2.0`). The admin panel compares it with the newest GitHub Release (falling back to tags; cached for 6 h) and shows an admin-only banner when a newer version exists.
+Set `CMS_VERSION` to your deployed version (default `1.2.1`). The admin panel compares it with the newest GitHub Release (falling back to tags; cached for 6 h) and shows an admin-only banner when a newer version exists.
 
 On hosts that can write to the app directory, set `CMS_UPDATER_ALLOW_APPLY=true` to unlock the updater in **Configurações → Atualizações**:
 
-- **Check** — refresh the cache now; `sgcore:check-updates` does it daily at 04:00.
+- **Check** — refresh the cache now (the button always hits GitHub); `sgcore:check-updates` does it daily at 04:00.
 - **Download package** — stores the release `.zip` in `storage/app/updates` and stops there (nothing is swapped). Works on shared hosting: no git/composer/node needed.
 - **Install** — applies the stored package: maintenance mode, in-place copy (keeping `.env`, `storage/`, `bootstrap/cache/` and the cPanel PHP handler block), `migrate --force`, `optimize:clear`. The `.zip` is deleted afterwards.
 - **Automatic updates** — three preferences saved in the DB (no `.env` edit): check, download and install. `sgcore:auto-update` runs hourly (needs the cron above) and only swaps files when install is enabled; it prefers the package and falls back to `git` on a clean clone when the release has no asset.
@@ -167,6 +167,8 @@ On hosts that can write to the app directory, set `CMS_UPDATER_ALLOW_APPLY=true`
 CLI equivalents: `php artisan sgcore:update` (git, with `--dry-run`), `php artisan sgcore:auto-update --dry-run`, `php artisan sgcore:check-updates`.
 
 Both apply paths run inside maintenance mode and clear caches. The **git** path also backs up the database when `mysqldump`/`pg_dump` is available; the **package** path does not, so keep scheduled DB backups (section 6) before enabling auto-install.
+
+If an update is interrupted (proxy timeout, CloudLinux LVE limit, fatal error), the site may stay at 503 with `storage/framework/down` left behind. Since v1.2.1 the Updates page stays reachable during maintenance, shows a warning and a **Leave maintenance** button, and releases a `down` file that has no live update lock by itself. Deleting `storage/framework/down` (and `storage/framework/maintenance.php`) or running `php artisan up` also fixes it.
 
 ### Upgrading an installation older than v1.0.1 (no updater yet)
 
