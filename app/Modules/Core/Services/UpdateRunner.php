@@ -179,9 +179,25 @@ class UpdateRunner
             $this->rollback($previous, $backup);
 
             throw $e;
+        } finally {
+            // `up` has no --secret option: passing it makes artisan exit with an
+            // error and leaves the site in maintenance mode (503) for good.
+            $this->leaveMaintenance();
         }
+    }
 
-        $this->run(['artisan', 'up', '--secret='.$secret]);
+    /**
+     * Best effort: turn the site back on, falling back to deleting the marker
+     * files when artisan itself cannot boot anymore.
+     */
+    private function leaveMaintenance(): void
+    {
+        try {
+            $this->must(['artisan', 'up']);
+        } catch (RuntimeException) {
+            @unlink(storage_path('framework/down'));
+            @unlink(storage_path('framework/maintenance.php'));
+        }
     }
 
     /**

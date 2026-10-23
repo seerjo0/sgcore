@@ -24,6 +24,7 @@ use App\Modules\Core\Services\ModuleManifest;
 use App\Modules\Core\Services\ModuleState;
 use App\Modules\Core\Services\Settings;
 use App\Modules\Core\Services\UpdateChecker;
+use Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -59,6 +60,14 @@ class CoreServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'core');
+
+        // The Updates page and its "leave maintenance" action stay reachable
+        // while the site is down: a stuck update must be recoverable from the
+        // panel, not only over FTP/SSH.
+        PreventRequestsDuringMaintenance::except([
+            'admin/configuracoes/atualizacoes',
+            'admin/configuracoes/atualizacoes/*',
+        ]);
 
         Gate::define('manage-settings', fn (User $user): bool => $user->role === Role::Admin);
         Gate::define('manage-modules', fn (User $user): bool => $user->role === Role::Admin);

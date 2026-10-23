@@ -26,30 +26,28 @@ Route::middleware('can:manage-settings')->group(function (): void {
         Route::get('/atualizacoes', [UpdateController::class, 'index'])
             ->name('atualizacoes.index');
 
+        Route::post('/atualizacoes/manutencao/sair', [UpdateController::class, 'releaseMaintenance'])
+            ->name('atualizacoes.manutencao.sair');
+
         Route::post('/atualizacoes/verificar', [UpdateController::class, 'check'])
-            ->middleware('throttle:10,1')
             ->name('atualizacoes.verificar');
 
         Route::post('/atualizacoes/descartar', [UpdateController::class, 'dismiss'])
             ->name('atualizacoes.descartar');
 
         Route::post('/atualizacoes/aplicar', [UpdateController::class, 'apply'])
-            ->middleware('throttle:2,15')
             ->name('atualizacoes.aplicar');
 
         Route::post('/atualizacoes/pacote', [UpdateController::class, 'applyPackage'])
-            ->middleware('throttle:2,15')
             ->name('atualizacoes.pacote');
 
         Route::post('/atualizacoes/config', [UpdateController::class, 'settings'])
             ->name('atualizacoes.config');
 
         Route::post('/atualizacoes/baixar', [UpdateController::class, 'download'])
-            ->middleware('throttle:5,15')
             ->name('atualizacoes.baixar');
 
         Route::post('/atualizacoes/instalar', [UpdateController::class, 'install'])
-            ->middleware('throttle:2,15')
             ->name('atualizacoes.instalar');
 
         Route::post('/atualizacoes/pacote/descartar', [UpdateController::class, 'discardPackage'])

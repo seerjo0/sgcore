@@ -36,13 +36,13 @@ class UpdateChecker
      *
      * @return array{tag:string,version:string,name:string,url:string,published_at:string,body:string}|null
      */
-    public function updateAvailable(bool $mayFetch = true): ?array
+    public function updateAvailable(bool $mayFetch = true, bool $force = false): ?array
     {
         if (! config('cms.updater.enabled')) {
             return null;
         }
 
-        $release = $mayFetch ? $this->latest() : $this->cached();
+        $release = $mayFetch ? $this->latest($force) : $this->cached();
 
         if ($release === null) {
             return null;
@@ -71,17 +71,35 @@ class UpdateChecker
     /**
      * @return array{tag:string,version:string,name:string,url:string,published_at:string,body:string}|null
      */
+    /**
+     * Latest release known to GitHub. Uses the cache unless $force is set
+     * (the "check now" button must always hit the network, otherwise a release
+     * published after the last fetch stays invisible for the whole TTL).
+     *
+     * Failures are never cached: a single timeout or GitHub 429 used to poison
+     * the cache for hours, making the panel claim "up to date" with a newer
+     * release out. When a forced fetch fails we still hand back the last good
+     * cached value, if any.
+     *
+     * @return array{tag:string,version:string,name:string,url:string,published_at:string,body:string}|null
+     */
     public function latest(bool $force = false): ?array
     {
-        if ($force) {
-            Cache::forget(self::CACHE_KEY);
+        $cached = $this->cached();
+
+        if (! $force && $cached !== null) {
+            return $cached;
         }
 
-        $ttl = max(60, (int) config('cms.updater.cache_ttl'));
+        $release = $this->fetch();
 
-        $result = Cache::remember(self::CACHE_KEY, $ttl, fn (): ?array => $this->fetch());
+        if ($release === null) {
+            return $force ? null : $cached;
+        }
 
-        return is_array($result) ? $result : null;
+        Cache::put(self::CACHE_KEY, $release, max(60, (int) config('cms.updater.cache_ttl')));
+
+        return $release;
     }
 
     public static function normalizeVersion(string $tag): string

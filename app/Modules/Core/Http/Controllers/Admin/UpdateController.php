@@ -14,6 +14,7 @@ use App\Modules\Core\Support\Version;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
@@ -30,7 +31,12 @@ class UpdateController extends Controller
         Settings $settings,
         UpdatePackageStore $store,
         UpdatePolicy $policy,
+        PackageApply $apply,
     ): View {
+        if ($apply->heal()) {
+            session()->flash('status', __('updater.maintenance_recovered'));
+        }
+
         $update = $checker->updateAvailable(mayFetch: false);
         $current = $checker->currentVersion();
         $stored = $store->current();
@@ -50,6 +56,7 @@ class UpdateController extends Controller
             'autoDownload' => $policy->autoDownload(),
             'autoInstall' => $policy->autoInstall(),
             'autoLast' => $settings->get('auto_update_last'),
+            'maintenance' => $apply->status(),
             'repo' => (string) config('cms.updater.repository', 'seerjo0/sgcore'),
         ]);
     }
@@ -58,23 +65,43 @@ class UpdateController extends Controller
      * Force-refresh the cached release info and report the outcome. Does not
      * apply anything — this is a read-only check.
      */
-    public function check(UpdateChecker $checker): RedirectResponse
+    public function check(Request $request, UpdateChecker $checker): RedirectResponse
     {
         if (! config('cms.updater.enabled')) {
             return back()->with('status', __('updater.disabled'));
         }
 
-        $update = $checker->updateAvailable(mayFetch: true);
+        if ($limited = $this->limit($request, 'check', 5, 1)) {
+            return $limited;
+        }
+
+        // Explicit user action: always bypass the cache, otherwise a release
+        // published after the last fetch stays invisible until the TTL ends.
+        $update = $checker->updateAvailable(mayFetch: true, force: true);
 
         if ($update !== null) {
             return back()->with('status', __('updater.available', ['version' => $update['tag']]));
         }
 
-        if ($checker->latest() === null && ($error = $checker->lastError()) !== null) {
+        if (($error = $checker->lastError()) !== null) {
             return back()->with('error', __('updater.check_failed', ['message' => $error]));
         }
 
         return back()->with('status', __('updater.up_to_date'));
+    }
+
+    /**
+     * Turn off a maintenance mode left behind by an interrupted update. This
+     * route is the one path allowed through while the site is down.
+     */
+    public function releaseMaintenance(PackageApply $apply): RedirectResponse
+    {
+        $wasDown = $apply->release();
+
+        return back()->with(
+            $wasDown ? 'success' : 'status',
+            __($wasDown ? 'updater.maintenance_released' : 'updater.maintenance_none'),
+        );
     }
 
     /**
@@ -117,12 +144,17 @@ class UpdateController extends Controller
      * Download the release's package asset onto the shelf, without applying it.
      */
     public function download(
+        Request $request,
         UpdateChecker $checker,
         PackageSource $source,
         UpdatePackageStore $store,
     ): RedirectResponse {
         if (! $this->canUsePackages()) {
             return back()->with('error', __('updater.package_disabled'));
+        }
+
+        if ($limited = $this->limit($request, 'download', 3, 5)) {
+            return $limited;
         }
 
         $update = $checker->updateAvailable(mayFetch: true);
@@ -168,6 +200,10 @@ class UpdateController extends Controller
     ): RedirectResponse {
         $request->validate(['confirm' => ['accepted']]);
 
+        if ($limited = $this->limit($request, 'install', 2, 5)) {
+            return $limited;
+        }
+
         if (! $this->canUsePackages()) {
             return back()->with('error', __('updater.package_disabled'));
         }
@@ -204,8 +240,12 @@ class UpdateController extends Controller
     /**
      * Delete the downloaded package from the shelf.
      */
-    public function discardPackage(UpdatePackageStore $store): RedirectResponse
+    public function discardPackage(Request $request, UpdatePackageStore $store): RedirectResponse
     {
+        if ($limited = $this->limit($request, 'discard', 5, 1)) {
+            return $limited;
+        }
+
         $removed = $store->discard();
 
         return back()->with(
@@ -227,6 +267,10 @@ class UpdateController extends Controller
 
         if (! config('cms.updater.apply.enabled')) {
             return back()->with('error', __('updater.apply_disabled'));
+        }
+
+        if ($limited = $this->limit($request, 'apply', 2, 5)) {
+            return $limited;
         }
 
         $update = $checker->updateAvailable(mayFetch: true);
@@ -273,6 +317,10 @@ class UpdateController extends Controller
             return back()->with('error', __('updater.package_disabled'));
         }
 
+        if ($limited = $this->limit($request, 'upload', 2, 5)) {
+            return $limited;
+        }
+
         $file = $request->file('package');
 
         try {
@@ -306,6 +354,25 @@ class UpdateController extends Controller
         return redirect()
             ->route('admin.dashboard')
             ->with('success', __('updater.applied', ['version' => 'v'.$newVersion]));
+    }
+
+    /**
+     * Centralized throttle, so the limits live in one place and the 429 is
+     * returned with a useful message instead of Laravel's default page.
+     */
+    private function limit(Request $request, string $bucket, int $max, int $minutes): ?RedirectResponse
+    {
+        $key = "updater.{$bucket}:".($request->user()?->id ?? $request->ip());
+
+        if (RateLimiter::tooManyAttempts($key, $max)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            return back()->with('error', __('updater.throttled', ['seconds' => $seconds]));
+        }
+
+        RateLimiter::hit($key, $minutes * 60);
+
+        return null;
     }
 
     private function canUsePackages(): bool

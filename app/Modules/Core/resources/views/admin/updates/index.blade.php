@@ -8,6 +8,22 @@
         <p class="text-sm text-slate-500">{{ __('nav.updates') }} · {{ $repo }}</p>
     </div>
 
+    @if (($maintenance['down'] ?? false))
+        <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p class="font-semibold">{{ __('updater.maintenance_title') }}</p>
+            <p class="mt-1">{{ __('updater.maintenance_note', ['since' => $maintenance['since'] !== '' ? $maintenance['since'] : '—']) }}</p>
+            @if ($maintenance['stale'])
+                <p class="mt-1">{{ __('updater.maintenance_stale') }}</p>
+            @endif
+            <form method="POST" action="{{ route('admin.configuracoes.atualizacoes.manutencao.sair') }}" class="mt-3">
+                @csrf
+                <button type="submit" class="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700">
+                    {{ __('updater.maintenance_release') }}
+                </button>
+            </form>
+        </div>
+    @endif
+
     @if (! $updaterEnabled)
         <div class="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
             {{ __('updater.disabled') }}

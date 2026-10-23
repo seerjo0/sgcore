@@ -115,6 +115,20 @@ class UpdateRunnerTest extends TestCase
         $this->assertStringContainsString('artisan migrate --force', $sequence);
         $this->assertStringContainsString('optimize:clear', $sequence);
         $this->assertStringContainsString('up', $sequence);
+
+        // `artisan up` has no options; passing --secret made it fail and left
+        // the site at 503 after a successful update.
+        $upCalls = array_values(array_filter($captured, fn (array $c): bool => in_array('up', $c[0], true)));
+
+        $this->assertNotEmpty($upCalls);
+
+        foreach ($upCalls as [$argv]) {
+            $this->assertSame('up', end($argv));
+
+            foreach ($argv as $arg) {
+                $this->assertStringStartsNotWith('--secret', (string) $arg);
+            }
+        }
     }
 
     public function test_apply_rolls_back_when_migrate_fails(): void
@@ -138,6 +152,7 @@ class UpdateRunnerTest extends TestCase
         $joined = implode(' | ', array_map(fn ($c) => implode(' ', $c[0]), $captured));
         $this->assertStringContainsString('checkout --detach abc123', $joined);
         $this->assertStringContainsString('composer install', $joined);
+        $this->assertStringContainsString('artisan up', $joined);
     }
 
     public function test_apply_refuses_dirty_tree(): void

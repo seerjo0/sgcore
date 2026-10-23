@@ -9,6 +9,7 @@ use App\Modules\Core\Services\UpdateChecker;
 use App\Modules\Core\Services\UpdatePackageStore;
 use App\Modules\Core\Services\UpdatePolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Mockery;
@@ -30,6 +31,11 @@ class UpdatesPageTest extends TestCase
     protected function tearDown(): void
     {
         File::deleteDirectory(storage_path('app/updates'));
+        File::delete([
+            storage_path('framework/down'),
+            storage_path('framework/update.lock'),
+            storage_path('framework/maintenance.php'),
+        ]);
 
         parent::tearDown();
     }
@@ -257,6 +263,112 @@ class UpdatesPageTest extends TestCase
 
         $this->assertTrue($policy->autoDownload());
         $this->assertTrue($policy->autoInstall());
+    }
+
+    public function test_check_now_bypasses_the_cached_release(): void
+    {
+        config(['cms.version' => '1.1.0-r2']);
+
+        Cache::put('sgcore.latest_release', [
+            'tag' => 'v1.1.0-r2',
+            'version' => '1.1.0-r2',
+            'name' => 'sgcore v1.1.0-r2',
+            'url' => 'https://github.com/seerjo0/sgcore/releases/tag/v1.1.0-r2',
+            'published_at' => '',
+            'body' => '',
+        ], 3600);
+
+        Http::fake([
+            'api.github.com/*' => Http::response([
+                'tag_name' => 'v1.2.0',
+                'name' => 'sgcore v1.2.0',
+                'html_url' => 'https://github.com/seerjo0/sgcore/releases/tag/v1.2.0',
+                'published_at' => '2026-10-22T00:00:00Z',
+                'body' => '',
+                'assets' => [],
+            ], 200),
+        ]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.configuracoes.atualizacoes.verificar'))
+            ->assertRedirect()
+            ->assertSessionHas('status', __('updater.available', ['version' => 'v1.2.0']));
+
+        $this->assertSame('1.2.0', app(UpdateChecker::class)->cached()['version'] ?? null);
+    }
+
+    public function test_a_failed_check_does_not_poison_the_cache(): void
+    {
+        config(['cms.version' => '1.1.0-r2']);
+        Cache::forget('sgcore.latest_release');
+
+        Http::fake(['api.github.com/*' => Http::response([], 500)]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.configuracoes.atualizacoes.verificar'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertNull(app(UpdateChecker::class)->cached());
+    }
+
+    public function test_the_install_action_is_throttled_with_a_message_instead_of_429(): void
+    {
+        config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
+        $this->storePackage('1.1.0-r2');
+
+        $this->app->instance(PackageApply::class, Mockery::mock(PackageApply::class)->shouldIgnoreMissing());
+
+        $admin = User::factory()->admin()->create();
+
+        Cache::forget('updater.install:'.$admin->id);
+
+        foreach ([1, 2] as $attempt) {
+            $this->actingAs($admin)
+                ->post(route('admin.configuracoes.atualizacoes.instalar'), ['confirm' => '1'])
+                ->assertRedirect();
+        }
+
+        $this->actingAs($admin)
+            ->post(route('admin.configuracoes.atualizacoes.instalar'), ['confirm' => '1'])
+            ->assertRedirect();
+
+        $this->assertStringContainsString('Muitas tentativas', (string) session('error'));
+    }
+
+    public function test_the_page_is_reachable_during_maintenance_and_can_release_it(): void
+    {
+        File::put(storage_path('framework/down'), '{}');
+        File::put(storage_path('framework/update.lock'), (string) json_encode([
+            'pid' => 1, 'version' => '1.1.0-r2', 'started_at' => time(),
+        ]));
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.configuracoes.atualizacoes.index'))
+            ->assertOk()
+            ->assertSee(__('updater.maintenance_title'), false);
+
+        $this->actingAs($admin)
+            ->post(route('admin.configuracoes.atualizacoes.manutencao.sair'))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertFileDoesNotExist(storage_path('framework/down'));
+    }
+
+    public function test_the_page_heals_a_maintenance_mode_left_behind_by_a_crashed_update(): void
+    {
+        File::put(storage_path('framework/down'), '{}');
+        touch(storage_path('framework/down'), time() - 3600);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.configuracoes.atualizacoes.index'))
+            ->assertOk()
+            ->assertSessionHas('status', __('updater.maintenance_recovered'));
+
+        $this->assertFileDoesNotExist(storage_path('framework/down'));
     }
 
     private function storePackage(string $version): void
