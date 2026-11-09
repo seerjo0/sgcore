@@ -11,6 +11,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.3.0-r2] — 2026-11-09
+
+Revisão 2 da 1.3.0: **fotos com fundo transparente param de virar fundo preto no upload**. Sem migration nova.
+
+### Corrigido
+- **Upload de PNG/WebP transparentes salvava com fundo preto**: o `MediaStorage` re-encodeia toda imagem via GD, e o GD só grava o canal alfa se `imagesavealpha()` estiver ligado — sem isso, o alpha é achatado sobre o preto padrão do canvas truecolor. Duas trilhas afetadas: (1) a imagem pequena (abaixo do limite de dimensão) era re-salva sem nenhum flag; (2) na trilha de resize o `imagecopyresampled` rodava com blending **desligado**, escurecendo as bordas semitransparentes (pixels totalmente transparentes têm RGB preto e entravam na média sem peso). Agora ambas as trilhas ligam `savealpha` + o blending correto, e um teste novo (`MediaTransparencyTest`) confere o canto 100% transparente e o centro semitransparente nos dois caminhos.
+
 ## [1.3.0-r1] — 2026-11-09
 
 Revisão 1 da 1.3.0: **o painel de atualização volta a funcionar de ponta a ponta** — corrigida a causa raiz de "As migrations falharam (exit 1)" em toda atualização por pacote desde a 1.2.0. Sem migration nova.
