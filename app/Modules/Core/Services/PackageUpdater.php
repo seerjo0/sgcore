@@ -31,6 +31,9 @@ class PackageUpdater
     /** Files that mix project rules with host (cPanel) directives. */
     private const HTACCESS_FILES = ['.htaccess', 'public/.htaccess'];
 
+    /** Message captured from the last failing in-process artisan call. */
+    private string $lastCommandError = '';
+
     /**
      * @param  (callable(string): int)|null  $commandRunner  runs an artisan command, returns exit code
      */
@@ -111,12 +114,19 @@ class PackageUpdater
             $clear = 0;
 
             if ($runCommands) {
+                $this->lastCommandError = '';
                 $report('migrate', 'Rodando migrations pendentes…', 88);
 
                 $migrate = ($this->runner())('migrate --force');
 
                 if ($migrate !== 0) {
-                    throw new RuntimeException('As migrations falharam após copiar os arquivos (exit '.$migrate.').');
+                    // Surface the real cause (the console kernel renders it to
+                    // the output buffer instead of rethrowing) — a bare
+                    // "exit 1" left operators blind on shared hosting.
+                    throw new RuntimeException(
+                        'As migrations falharam após copiar os arquivos (exit '.$migrate.').'
+                        .($this->lastCommandError !== '' ? ' Causa: '.$this->lastCommandError : ''),
+                    );
                 }
 
                 $report('cache', 'Limpando caches da aplicação…', 95);
@@ -363,11 +373,27 @@ class PackageUpdater
     {
         return $this->commandRunner ?? function (string $command): int {
             try {
-                return Artisan::call(trim(explode(' ', $command, 2)[0]), $this->parseArgs($command));
-            } catch (Throwable) {
+                $code = Artisan::call(trim(explode(' ', $command, 2)[0]), $this->parseArgs($command));
+
+                if ($code !== 0) {
+                    // Symfony's console renders the real failure into the
+                    // output buffer (exceptions are caught by the kernel, not
+                    // rethrown) — keep it so the terminal can show WHY.
+                    $this->lastCommandError = $this->oneLine(Artisan::output());
+                }
+
+                return $code;
+            } catch (Throwable $e) {
+                $this->lastCommandError = $e->getMessage();
+
                 return 1;
             }
         };
+    }
+
+    private function oneLine(string $text): string
+    {
+        return trim((string) preg_replace('/\s+/', ' ', strip_tags($text)));
     }
 
     /**
@@ -382,8 +408,18 @@ class PackageUpdater
 
         foreach ($parts as $part) {
             if (str_starts_with($part, '--')) {
-                $flag = substr($part, 2);
-                $args[$flag] = str_contains($flag, '=') ? (explode('=', $flag, 2)[1]) : true;
+                // Keep the leading dashes: Artisan::call only treats a key as
+                // an OPTION when it starts with "--". A bare 'force' is read as
+                // an ARGUMENT — migrate rejects it ("The force argument does
+                // not exist"), which silently failed every panel update since
+                // 1.2.0 (rollback always restored the site, hiding the cause).
+                $eq = strpos($part, '=');
+
+                if ($eq === false) {
+                    $args[$part] = true;
+                } else {
+                    $args[substr($part, 0, $eq)] = substr($part, $eq + 1);
+                }
             }
         }
 
