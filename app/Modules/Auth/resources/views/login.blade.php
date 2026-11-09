@@ -45,6 +45,10 @@
                     class="w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-500">
                 {{ __('login.submit') }}
             </button>
+
+            <a href="{{ route('password.request') }}" class="block text-center text-sm text-slate-500 hover:text-slate-700">
+                {{ __('login.forgot') }}
+            </a>
         </form>
     </div>
 </body>
