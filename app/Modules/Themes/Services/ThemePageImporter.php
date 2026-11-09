@@ -42,6 +42,9 @@ class ThemePageImporter
     /** data-pb-type-aware heading detection. */
     private const HEADING_TAGS = ['h1' => 1, 'h2' => 2, 'h3' => 3, 'h4' => 4, 'h5' => 5, 'h6' => 6];
 
+    /** Slug of the theme being converted right now (relative-asset rewriting). */
+    private ?string $convertingSlug = null;
+
     public function __construct(private ThemeDiscovery $themes) {}
 
     /**
@@ -68,6 +71,103 @@ class ThemePageImporter
             throw new RuntimeException("Template '{$template}' não encontrado no tema '{$themeSlug}'.");
         }
 
+        $this->convertingSlug = $theme->slug;
+
+        try {
+            return $this->project($this->walk($this->bodyOf($file)));
+        } finally {
+            $this->convertingSlug = null;
+        }
+    }
+
+    /**
+     * The theme's own stylesheet, with relative asset references rewritten to
+     * /theme-assets/{slug}/... so a converted page keeps the theme's look in
+     * the builder preview and on the public render (served as page CSS).
+     */
+    public function themeStyles(string $themeSlug): string
+    {
+        $theme = $this->requireTheme($themeSlug);
+        $file = $theme->path.'/styles.css';
+
+        if (! is_file($file)) {
+            return '';
+        }
+
+        $this->convertingSlug = $theme->slug;
+
+        try {
+            return $this->rewriteAssetUrls((string) file_get_contents($file));
+        } finally {
+            $this->convertingSlug = null;
+        }
+    }
+
+    /**
+     * Create one draft Page per template the theme exposes (home/page/404),
+     * each carrying its converted builder project + the theme stylesheet.
+     *
+     * @return list<Page>
+     */
+    public function importAll(string $themeSlug, string $titleBase): array
+    {
+        $theme = $this->requireTheme($themeSlug);
+        $css = $this->themeStyles($themeSlug);
+        $pages = [];
+
+        foreach (array_keys($theme->templates()) as $key) {
+            $pages[] = Page::query()->create([
+                'title' => $key === 'home' ? $titleBase : $titleBase.' — '.$key,
+                'slug' => $key === 'home'
+                    ? $this->uniqueSlug($titleBase)
+                    : $this->uniqueSlug($titleBase.'-'.$key),
+                'status' => 'draft',
+                'is_home' => false,
+                'content' => ['body' => ''],
+                'builder_draft' => $this->import($themeSlug, $key),
+                'builder_custom_css' => $css !== '' ? $css : null,
+            ]);
+        }
+
+        return $pages;
+    }
+
+    /**
+     * Create a draft Page whose builder project is the converted template,
+     * carrying the theme stylesheet as page CSS so the preview matches the
+     * theme (the builder's own chrome/styles are Bootstrap-only).
+     */
+    public function importToPage(string $themeSlug, string $template, string $title): Page
+    {
+        $css = $this->themeStyles($themeSlug);
+
+        $page = $this->createDraftPage(
+            $title,
+            $this->import($themeSlug, $template),
+            $css !== '' ? $css : null,
+        );
+
+        return $page;
+    }
+
+    private function createDraftPage(string $title, array $project, ?string $css): Page
+    {
+        return Page::query()->create([
+            'title' => $title,
+            'slug' => $this->uniqueSlug($title),
+            'status' => 'draft',
+            'is_home' => false,
+            'content' => ['body' => ''],
+            'builder_draft' => $project,
+            'builder_custom_css' => $css,
+        ]);
+    }
+
+    /**
+     * @return DOMNode|null
+     */
+    private function bodyOf(string $file)
+    {
         $dom = new DOMDocument('1.0', 'UTF-8');
         $previous = libxml_use_internal_errors(true);
         $dom->loadHTML(
@@ -79,26 +179,8 @@ class ThemePageImporter
         libxml_use_internal_errors($previous);
 
         $root = $dom->getElementById('pb-import-root');
-        $body = $this->firstTag($root, 'body');
 
-        return $this->project($this->walk($body ?? $root));
-    }
-
-    /**
-     * Create a draft Page whose builder project is the converted template.
-     */
-    public function importToPage(string $themeSlug, string $template, string $title): Page
-    {
-        $project = $this->import($themeSlug, $template);
-
-        return Page::query()->create([
-            'title' => $title,
-            'slug' => Page::query()->count() === 0 ? 'importado-'.substr((string) $template, 0, 4) : $this->uniqueSlug($title),
-            'status' => 'draft',
-            'is_home' => false,
-            'content' => ['body' => ''],
-            'builder_draft' => $project,
-        ]);
+        return $this->firstTag($root, 'body') ?? $root;
     }
 
     /**
@@ -282,7 +364,7 @@ class ThemePageImporter
             'type' => 'image',
             'tagName' => 'img',
             'attributes' => array_filter(
-                ['src' => $src, 'alt' => $alt, 'data-pb-type' => 'image'],
+                ['src' => $this->assetUrl($src), 'alt' => $alt, 'data-pb-type' => 'image'],
                 fn ($v) => $v !== ''
             ),
             'classes' => ['img-fluid'],
@@ -351,7 +433,73 @@ class ThemePageImporter
         // lives in the `data-pb-code` trait.
         return $this->node('html', 'div', [], [
             $this->textNode('&lt;!-- Escreva seu HTML na aba Propriedades --&gt;'),
-        ], ['data-pb-code' => $html]);
+        ], ['data-pb-code' => $this->rewriteMarkupAssets($html)]);
+    }
+
+    /**
+     * Root-relative or absolute references already resolve publicly; theme-
+     * relative ones (assets/img/hero.jpg, ./bg.png) are rewritten to the
+     * /theme-assets/{slug}/ route so the converted page keeps the theme's art.
+     */
+    private function assetUrl(string $reference): string
+    {
+        $reference = trim($reference);
+
+        if ($reference === '' || $this->convertingSlug === null) {
+            return $reference;
+        }
+
+        $probe = preg_replace('/[\x00-\x20\x7F]+/', '', $reference) ?? $reference;
+
+        if (str_starts_with($probe, '/') || str_starts_with($probe, '#')
+            || preg_match('#^[a-z][a-z0-9+.-]*:|^//#i', $probe) === 1) {
+            return $reference;
+        }
+
+        $clean = preg_replace('/^\.\//', '', $probe) ?? $probe;
+
+        return '/theme-assets/'.$this->convertingSlug.'/'.ltrim($clean, '/');
+    }
+
+    /**
+     * Point src/poster references inside a custom-code block at the theme
+     * asset route too (navigation hrefs are left alone).
+     */
+    private function rewriteMarkupAssets(string $html): string
+    {
+        if ($this->convertingSlug === null || trim($html) === '') {
+            return $html;
+        }
+
+        return preg_replace_callback(
+            '#\b(src|poster)=(["\'])([^"\']+)\2#i',
+            fn (array $m): string => $m[1].'='.$m[2].$this->assetUrl($m[3]).$m[2],
+            $html,
+        ) ?? $html;
+    }
+
+    /**
+     * Rewrite url(...) references inside a stylesheet to the theme asset
+     * route (same rules as assetUrl: absolute/data/root-relative pass through).
+     */
+    private function rewriteAssetUrls(string $css): string
+    {
+        if ($this->convertingSlug === null) {
+            return $css;
+        }
+
+        return preg_replace_callback(
+            '/url\(\s*(?:"([^"]*)"|\'([^\']*)\'|([^)\s]*))\s*\)/i',
+            function (array $m): string {
+                $value = trim(
+                    ($m[1] ?? '').($m[2] ?? '').($m[3] ?? ''),
+                    " \t\n\r\0\x0B\"'"
+                );
+
+                return 'url("'.$this->assetUrl($value).'")';
+            },
+            $css,
+        ) ?? $css;
     }
 
     /**

@@ -127,6 +127,11 @@
                                                 class="rounded-lg border border-primary-600 px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">
                                             {{ __('themes.import_convert') }}
                                         </button>
+                                        <button type="submit"
+                                                name="template" value="all"
+                                                class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                                            {{ __('themes.import_convert_all') }}
+                                        </button>
                                     </form>
                                 @endif
                             @endcan

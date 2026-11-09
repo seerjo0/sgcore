@@ -74,8 +74,9 @@ class AppearanceController extends Controller
     }
 
     /**
-     * POST /admin/aparencia/importar — convert a theme template into an
-     * editable Site Builder page and open it in the editor.
+     * POST /admin/aparencia/importar — convert a theme template (or every
+     * template the theme exposes, with template=all) into editable Site
+     * Builder pages that also appear in the Páginas listing.
      */
     public function import(Request $request): RedirectResponse
     {
@@ -86,6 +87,17 @@ class AppearanceController extends Controller
         ]);
 
         try {
+            if ($validated['template'] === 'all') {
+                $pages = $this->pageImporter->importAll(
+                    $validated['theme'],
+                    $validated['title'],
+                );
+
+                return redirect()
+                    ->route('admin.paginas.index')
+                    ->with('success', __('themes.imported_all', ['count' => count($pages)]));
+            }
+
             $page = $this->pageImporter->importToPage(
                 $validated['theme'],
                 $validated['template'],

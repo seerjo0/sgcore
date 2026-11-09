@@ -8,6 +8,7 @@ use App\Modules\PageBuilder\Services\Components\ComponentNode;
 use App\Modules\Pages\Models\Page;
 use App\Modules\Themes\Services\ThemePageImporter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class ThemePageImportTest extends TestCase
@@ -183,5 +184,82 @@ class ThemePageImportTest extends TestCase
             ->assertSee('<h1', false)
             ->assertDontSee('&lt;div', false)
             ->assertDontSee('&lt;h1', false);
+    }
+
+    public function test_conversion_carries_the_theme_stylesheet_as_page_css(): void
+    {
+        // The "adapts to everything" half: a converted page must LOOK like the
+        // theme. Its styles.css becomes the page's builder_custom_css, and
+        // relative url()/src references are rewritten to /theme-assets/{slug}/.
+        $themePath = storage_path('app/themes/reproto');
+        File::deleteDirectory(storage_path('app/themes/reproto'));
+        File::makeDirectory($themePath, 0755, true);
+        File::put($themePath.'/theme.json', json_encode([
+            'name' => 'Repro',
+            'templates' => ['home' => 'index.html', 'page' => 'index.html'],
+            'slots' => new \stdClass,
+        ]));
+        File::put($themePath.'/styles.css', ".hero{background:url('bg.png') no-repeat}.x{background:url(\"./img/a.jpg\")}.y{background:url(/abs.png)}.z{background:url(https://cdn.example/e.png)}\n");
+        File::put($themePath.'/index.html', '<!DOCTYPE html><html><body><main><section class="hero"><img src="assets/hero.jpg" alt="Hero"></section></main></body></html>');
+
+        try {
+            $page = $this->importer()->importToPage('reproto', 'home', 'Repro');
+
+            $css = (string) $page->builder_custom_css;
+            $this->assertStringContainsString('/theme-assets/reproto/bg.png', $css);
+            $this->assertStringContainsString('/theme-assets/reproto/img/a.jpg', $css);
+            $this->assertStringContainsString('/abs.png', $css);
+            $this->assertStringNotContainsString('/theme-assets/reproto/abs.png', $css);
+            $this->assertStringContainsString('https://cdn.example/e.png', $css);
+            $this->assertStringNotContainsString('/theme-assets/reproto/https', $css);
+
+            $json = json_encode($page->builder_draft, JSON_UNESCAPED_SLASHES);
+            $this->assertStringContainsString('/theme-assets/reproto/assets/hero.jpg', $json);
+
+            // And the public render keeps the stylesheet alongside bootstrap.
+            $admin = User::factory()->admin()->create();
+            $this->actingAs($admin)
+                ->postJson(route('admin.paginas.builder.publish', $page), [
+                    'html' => '<section></section>',
+                    'css' => '.hero{}',
+                    'json' => json_encode($page->builder_draft),
+                ])
+                ->assertOk();
+
+            $page->update(['status' => 'published']);
+            $this->get('/'.$page->slug)
+                ->assertOk()
+                ->assertSee('/theme-assets/reproto/bg.png', false);
+        } finally {
+            File::deleteDirectory($themePath);
+        }
+    }
+
+    public function test_convert_all_creates_one_page_per_template_with_drafts(): void
+    {
+        // The bulk request: every theme screen lands in Páginas, each one with
+        // its builder draft and the theme stylesheet.
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)
+            ->post(route('admin.aparencia.importar'), [
+                'theme' => 'classic',
+                'template' => 'all',
+                'title' => 'Site Clássico',
+            ]);
+
+        $response->assertRedirect(route('admin.paginas.index'));
+        $response->assertSessionHas('success', __('themes.imported_all', ['count' => 3]));
+
+        $pages = Page::query()->where('status', 'draft')->get();
+        $this->assertCount(3, $pages);
+        $this->assertTrue($pages->contains(fn (Page $p): bool => $p->title === 'Site Clássico'));
+        $this->assertTrue($pages->contains(fn (Page $p): bool => $p->title === 'Site Clássico — page'));
+
+        foreach ($pages as $page) {
+            $this->assertIsArray($page->builder_draft);
+            $this->assertNotEmpty($page->builder_custom_css);
+            $this->assertFalse((bool) $page->is_home);
+        }
     }
 }
