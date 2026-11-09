@@ -11,6 +11,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.2.3-r1] — 2026-11-09
+
+Revisão 1 da 1.2.3: o **atualizar com progresso em clique único volta a funcionar**. Sem migration nova, sem mudança no Site Builder além da 1.2.3.
+
+### Corrigido
+- **"Atualizar com progresso" falhava com "Nenhum pacote baixado."**: o link abre a tela com a palavra `?modo=atualizar`, a view injeta no JavaScript o modo **resolvido** (`update`) e o stream POST devolve `modo=update` — mas o controller só reconhecia a palavra `atualizar`. Todo clique único caía no modo `install`, que exige pacote na prateleira (descado) e morria em "Nenhum pacote baixado. Rollback foi tentado." O caminho em dois cliques (Baixar → Instalar agora) funcionava, por isso os testes (que postavam `instalar`) não pegaram. `mode()` agora aceita os dois vocabulários (`atualizar`/`update` e `instalar`/`install`), e um teste novo reproduz o round-trip real da página (GET com a palavra, POST com o valor interno, NDJSON baixando + aplicando).
+
+### Nota
+- Instalações na **1.2.2** ou **1.2.3** que tenham travado no clique único: atualize pelo painel usando **Baixar** e depois **Instalar agora** (esse caminho nunca quebrou), ou envie o `sgcore-1.2.3-r1-public_html.zip` em *Atualização manual → Pacote .zip*. Da 1.2.3-r1 em diante o clique único volta a funcionar.
+
 ## [1.2.3] — 2026-11-09
 
 Correção pontual no Site Builder: o "código HTML puro" no Pré-visualizar/páginas aninhadas e a conversão de tema pelo menu Aparência, que abria blocos sem Propriedades e cheios de lixo do `<head>`. Sem migration nova.
