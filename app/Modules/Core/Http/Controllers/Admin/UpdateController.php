@@ -591,7 +591,15 @@ class UpdateController extends Controller
 
     private function mode(Request $request): string
     {
-        return $request->input('modo', $request->query('modo')) === 'atualizar' ? 'update' : 'install';
+        $modo = (string) $request->input('modo', $request->query('modo'));
+
+        // Two vocabularies arrive here: the sidebar/banner link sends the pt
+        // word ('atualizar'), and the progress page's JS echoes the RESOLVED
+        // internal mode ('update') that Blade injected into cfg — both mean
+        // download+apply. Accepting only the word made the browser round-trip
+        // fall into 'install', which demands an already-downloaded package
+        // and died with "Nenhum pacote baixado." (v1.2.2 regression).
+        return in_array($modo, ['atualizar', 'update'], true) ? 'update' : 'install';
     }
 
     /**

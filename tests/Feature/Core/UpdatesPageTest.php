@@ -428,6 +428,47 @@ class UpdatesPageTest extends TestCase
         $this->assertNull(app(UpdatePackageStore::class)->current());
     }
 
+    public function test_the_stream_update_mode_round_trips_the_internal_mode_value(): void
+    {
+        // What the browser actually sends: the progress page is opened with
+        // the pt word `?modo=atualizar`, Blade injects the RESOLVED internal
+        // mode into cfg, and the stream POST echoes `modo=update` — not the
+        // word. Treating anything but 'atualizar' as 'install' made the
+        // one-click "Atualizar com progresso" die with "No package
+        // downloaded." (v1.2.2 regression).
+        config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
+        $this->fakeRelease('v1.1.0-r2', withPackage: true);
+
+        $admin = User::factory()->admin()->create();
+
+        // No package on the shelf: opening with the word 'atualizar' must
+        // resolve to update mode — install mode would bounce to the index.
+        $this->actingAs($admin)
+            ->get(route('admin.configuracoes.atualizacoes.executar', ['modo' => 'atualizar']))
+            ->assertOk();
+
+        $apply = Mockery::mock(PackageApply::class);
+        $apply->shouldReceive('apply')
+            ->once()
+            ->andReturnUsing(function (string $path, string $from, ?\Closure $progress = null): array {
+                $progress?->__invoke(['stage' => 'files', 'message' => 'Copiando arquivos… 10/20', 'percent' => 50]);
+
+                return [
+                    'from' => '1.1.0-r1', 'to' => '1.1.0-r2', 'copied' => 1, 'skipped' => 0, 'migrate' => 0, 'clear' => 1,
+                ];
+            });
+        $this->app->instance(PackageApply::class, $apply);
+
+        $body = (string) $this->actingAs($admin)
+            ->post(route('admin.configuracoes.atualizacoes.executar.iniciar'), ['modo' => 'update'])
+            ->streamedContent();
+
+        $this->assertStringNotContainsString(__('updater.package_none'), $body);
+        $this->assertStringContainsString('Copiando arquivos', $body);
+        $this->assertStringContainsString('"ok":true', $body);
+        $this->assertStringContainsString('v1.1.0-r2', $body);
+    }
+
     public function test_the_stream_reports_a_failure_and_keeps_the_package(): void
     {
         config(['cms.version' => '1.1.0-r1', 'cms.updater.apply.enabled' => true]);
