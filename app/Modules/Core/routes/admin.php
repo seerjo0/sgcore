@@ -23,6 +23,9 @@ Route::middleware('can:manage-settings')->group(function (): void {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::post('/', [SettingsController::class, 'update'])->name('update');
 
+        Route::post('/email/teste', [SettingsController::class, 'testMail'])
+            ->name('email.teste');
+
         Route::get('/atualizacoes', [UpdateController::class, 'index'])
             ->name('atualizacoes.index');
 

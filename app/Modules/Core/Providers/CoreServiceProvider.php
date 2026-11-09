@@ -18,12 +18,14 @@ use App\Modules\Core\Services\EnvironmentWriter;
 use App\Modules\Core\Services\InstallerLock;
 use App\Modules\Core\Services\InstallerService;
 use App\Modules\Core\Services\InstallStepRegistry;
+use App\Modules\Core\Services\MailSettings;
 use App\Modules\Core\Services\ModuleDiscovery;
 use App\Modules\Core\Services\ModuleImporter;
 use App\Modules\Core\Services\ModuleManifest;
 use App\Modules\Core\Services\ModuleState;
 use App\Modules\Core\Services\Settings;
 use App\Modules\Core\Services\UpdateChecker;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -40,6 +42,7 @@ class CoreServiceProvider extends ServiceProvider
 
         $this->app->singleton(Settings::class);
         $this->app->singleton(InstallerLock::class);
+        $this->app->singleton(MailSettings::class);
         $this->app->singleton(InstallStepRegistry::class);
         $this->app->singleton(EnvironmentWriter::class);
         $this->app->singleton(DatabaseSetup::class);
@@ -71,6 +74,18 @@ class CoreServiceProvider extends ServiceProvider
 
         Gate::define('manage-settings', fn (User $user): bool => $user->role === Role::Admin);
         Gate::define('manage-modules', fn (User $user): bool => $user->role === Role::Admin);
+
+        // Panel-managed SMTP overrides the .env mail config on every run (web
+        // and CLI). Deferred to `booted` so we read config written by later
+        // providers, and guarded: a fresh/uninstalled site has no settings
+        // table — mail then keeps the .env defaults.
+        $this->app->booted(function (): void {
+            try {
+                $this->app->make(MailSettings::class)->apply();
+            } catch (QueryException) {
+                // pre-install or migrations pending: keep env defaults
+            }
+        });
 
         $this->commands([
             InstallCommand::class,

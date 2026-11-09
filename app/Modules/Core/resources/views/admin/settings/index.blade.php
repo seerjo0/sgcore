@@ -185,6 +185,94 @@
             </div>
         </div>
 
+        <hr class="my-8 border-slate-200">
+
+        <h3 class="text-base font-semibold text-slate-800">{{ __('settings.mail') }}</h3>
+        <p class="mt-1 text-sm text-slate-500">{{ __('settings.mail_help') }}</p>
+
+        <p class="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium
+                  {{ $mailReady ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">
+            <span class="h-2 w-2 rounded-full {{ $mailReady ? 'bg-emerald-500' : 'bg-slate-400' }}"></span>
+            {{ $mailReady ? __('settings.mail_status_on') : __('settings.mail_status_off') }}
+        </p>
+
+        <div class="mt-5 grid gap-5">
+            <div>
+                <label for="mail_transport" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_transport') }}</label>
+                <select id="mail_transport" name="mail_transport"
+                        class="mt-1 w-72 rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="log" @selected(old('mail_transport', $mail['transport']) === 'log')>{{ __('settings.mail_transport_log') }}</option>
+                    <option value="smtp" @selected(old('mail_transport', $mail['transport']) === 'smtp')>{{ __('settings.mail_transport_smtp') }}</option>
+                </select>
+                <p class="mt-1 text-xs text-slate-500">{{ __('settings.mail_transport_help') }}</p>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-3">
+                <div class="sm:col-span-2">
+                    <label for="mail_host" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_host') }}</label>
+                    <input type="text" id="mail_host" name="mail_host" maxlength="255"
+                           value="{{ old('mail_host', $mail['host']) }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    @error('mail_host') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="mail_port" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_port') }}</label>
+                    <input type="number" id="mail_port" name="mail_port" min="1" max="65535"
+                           value="{{ old('mail_port', $mail['port']) }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    @error('mail_port') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-3">
+                <div>
+                    <label for="mail_encryption" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_encryption') }}</label>
+                    <select id="mail_encryption" name="mail_encryption"
+                            class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        @foreach (['tls', 'ssl', 'none'] as $enc)
+                            <option value="{{ $enc }}" @selected(old('mail_encryption', $mail['encryption']) === $enc)>{{ __("settings.mail_enc_{$enc}") }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="mail_username" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_username') }}</label>
+                    <input type="text" id="mail_username" name="mail_username" maxlength="255"
+                           autocomplete="off" value="{{ old('mail_username', $mail['username']) }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                </div>
+                <div>
+                    <label for="mail_password" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_password') }}</label>
+                    <input type="password" id="mail_password" name="mail_password" maxlength="500"
+                           autocomplete="new-password"
+                           placeholder="{{ $mail['has_password'] ? __('settings.mail_password_stored') : __('settings.mail_password_placeholder') }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    @if ($mail['has_password'])
+                        <label class="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                            <input type="checkbox" name="mail_password_clear" value="1"
+                                   class="rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                            {{ __('settings.mail_password_clear') }}
+                        </label>
+                    @endif
+                </div>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <label for="mail_from_address" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_from_address') }}</label>
+                    <input type="email" id="mail_from_address" name="mail_from_address" maxlength="255"
+                           value="{{ old('mail_from_address', $mail['from_address']) }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    @error('mail_from_address') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="mail_from_name" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_from_name') }}</label>
+                    <input type="text" id="mail_from_name" name="mail_from_name" maxlength="150"
+                           value="{{ old('mail_from_name', $mail['from_name']) }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                </div>
+            </div>
+        </div>
+
         <div class="mt-6 flex items-center gap-3">
             <button type="submit"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
@@ -193,6 +281,20 @@
             <span class="text-xs text-slate-500">{{ __('settings.live_preview_note') }}</span>
         </div>
     </form>
+
+    <div class="mt-6 max-w-3xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-base font-semibold text-slate-800">{{ __('settings.mail_test') }}</h3>
+        <p class="mt-1 text-sm text-slate-500">
+            {{ __('settings.mail_test_help', ['address' => $mailTestAddress]) }}
+        </p>
+        <form method="POST" action="{{ route('admin.configuracoes.email.teste') }}" class="mt-4">
+            @csrf
+            <button type="submit"
+                    class="rounded-lg border border-primary-600 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50">
+                {{ __('settings.mail_test_send') }}
+            </button>
+        </form>
+    </div>
 
     <script>
         document.querySelectorAll('input[name="mode"]').forEach(function (input) {

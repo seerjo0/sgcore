@@ -4,6 +4,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
+### Adicionado
+- **E-mail (SMTP) nas Configurações**: seção nova no painel (`/admin/configuracoes`) para configurar o servidor de disparo sem tocar no `.env` — transporte (Sem envio/log ou SMTP), host, porta, criptografia (TLS/SSL/nenhum), usuário, senha (criptografada no banco, nunca reapresentada na tela; salvar em branco mantém a atual, há checkbox para remover) e remetente (e-mail + nome). As Configurações **sobrepõem o `.env` em runtime** (web e CLI) enquanto ativas; com o transporte em "Sem envio" nada é entregue (vai para o log). Card com status + botão **Enviar e-mail de teste** que dispara para o e-mail do usuário logado e mostra a **causa real** de qualquer recusa do servidor SMTP (com rate limit de 3 testes/5 min). Gate `manage-settings` (somente admin).
+
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).
