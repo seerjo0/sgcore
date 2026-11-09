@@ -256,7 +256,7 @@
                 </div>
             </div>
 
-            <div class="grid gap-5 sm:grid-cols-2">
+            <div class="grid gap-5 sm:grid-cols-3">
                 <div>
                     <label for="mail_from_address" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_from_address') }}</label>
                     <input type="email" id="mail_from_address" name="mail_from_address" maxlength="255"
@@ -269,6 +269,14 @@
                     <input type="text" id="mail_from_name" name="mail_from_name" maxlength="150"
                            value="{{ old('mail_from_name', $mail['from_name']) }}"
                            class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                </div>
+                <div>
+                    <label for="mail_to_address" class="block text-sm font-medium text-slate-700">{{ __('settings.mail_to') }}</label>
+                    <input type="email" id="mail_to_address" name="mail_to_address" maxlength="255"
+                           value="{{ old('mail_to_address', $mail['to_address']) }}"
+                           class="mt-1 w-full rounded border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <p class="mt-1 text-xs text-slate-500">{{ __('settings.mail_to_help') }}</p>
+                    @error('mail_to_address') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
         </div>

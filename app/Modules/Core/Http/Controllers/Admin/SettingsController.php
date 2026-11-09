@@ -86,6 +86,7 @@ class SettingsController extends Controller
             'mail_password_clear' => ['sometimes', 'boolean'],
             'mail_from_address' => ['sometimes', 'nullable', 'email', 'max:255', 'required_if:mail_transport,smtp'],
             'mail_from_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'mail_to_address' => ['sometimes', 'nullable', 'email', 'max:255'],
 
             'admin_path' => [
                 'sometimes',

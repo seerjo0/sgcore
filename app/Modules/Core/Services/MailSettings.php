@@ -27,6 +27,7 @@ class MailSettings
         'mail_password',
         'mail_from_address',
         'mail_from_name',
+        'mail_to_address',
     ];
 
     public function __construct(private Settings $settings, private InstallerLock $lock) {}
@@ -46,6 +47,7 @@ class MailSettings
         $this->settings->set('mail_username', $this->nullable($input['mail_username'] ?? null), 'mail');
         $this->settings->set('mail_from_address', $this->nullable($input['mail_from_address'] ?? null), 'mail');
         $this->settings->set('mail_from_name', $this->nullable($input['mail_from_name'] ?? null), 'mail');
+        $this->settings->set('mail_to_address', $this->nullable($input['mail_to_address'] ?? null), 'mail');
 
         $password = $input['mail_password'] ?? '';
 
@@ -73,6 +75,7 @@ class MailSettings
             'username' => (string) ($this->settings->get('mail_username') ?? ''),
             'from_address' => (string) ($this->settings->get('mail_from_address') ?? ''),
             'from_name' => (string) ($this->settings->get('mail_from_name') ?? ''),
+            'to_address' => (string) ($this->settings->get('mail_to_address') ?? ''),
             'has_password' => $this->settings->get('mail_password') !== null,
         ];
     }

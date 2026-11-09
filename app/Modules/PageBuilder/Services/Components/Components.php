@@ -255,6 +255,27 @@ final class Components
                 rules: ['code' => ['nullable', 'string', 'max:50000']],
                 defaults: ['code' => ''],
             ),
+            new GenericComponent(
+                type: 'contact_form',
+                name: __('pagebuilder.block_contact_form'),
+                group: 'components',
+                view: 'pagebuilder::components.contact_form',
+                props: [
+                    'title' => ['label' => __('pagebuilder.prop_title'), 'type' => 'text'],
+                    'button' => ['label' => __('pagebuilder.prop_button'), 'type' => 'text'],
+                    'subject' => ['label' => __('pagebuilder.prop_mail_subject'), 'type' => 'text'],
+                ],
+                rules: [
+                    'title' => ['nullable', 'string', 'max:120'],
+                    'button' => ['nullable', 'string', 'max:60'],
+                    'subject' => ['nullable', 'string', 'max:150'],
+                ],
+                defaults: [
+                    'title' => (string) __('pagebuilder.contact_form_title'),
+                    'button' => (string) __('common.send'),
+                    'subject' => '',
+                ],
+            ),
         ];
     }
 }

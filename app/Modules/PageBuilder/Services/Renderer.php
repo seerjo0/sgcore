@@ -32,6 +32,9 @@ class Renderer
 {
     private const EPOCH_KEY = 'pb-purge-epoch';
 
+    /** Class marker the contact-form component emits; pages with it skip the document cache. */
+    public const LIVE_FORM_MARKER = 'pb-contact-form';
+
     public function __construct(
         private Settings $settings,
         private BuilderSanitizer $sanitizer,
@@ -64,7 +67,12 @@ class Renderer
         $css = $this->sanitizer->sanitizeCss((string) ($built['css'] ?? ''));
         $document = $this->document($content, $css, $page);
 
-        Cache::put($key, $document, (int) config('pagebuilder.cache_ttl_seconds'));
+        // Pages containing the live contact form are NEVER cached: the form
+        // embeds a CSRF token and reflects session state (old() input, status
+        // alerts), which a shared document cache would leak across visitors.
+        if (! str_contains($document, self::LIVE_FORM_MARKER)) {
+            Cache::put($key, $document, (int) config('pagebuilder.cache_ttl_seconds'));
+        }
 
         return $document;
     }

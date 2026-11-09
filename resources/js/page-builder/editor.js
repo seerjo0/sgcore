@@ -1405,6 +1405,20 @@ import 'grapesjs/dist/css/grapes.min.css';
                 content: '<div class="pb-html text-muted p-3 border border-dashed rounded" data-pb-type="html" data-pb-code="">&lt;!-- Escreva seu HTML na aba Propriedades --&gt;</div>',
                 select: true,
             },
+            {
+                id: 'pb-contact-form',
+                label: B.contactForm,
+                category: categoryComponents,
+                media: blockIcon,
+                content: '<section class="pb-contact-form py-4" data-pb-type="contact_form" data-pb-title="' + escapeHtml(B.sampleContactTitle) + '" data-pb-button="' + escapeHtml(B.sampleContactButton) + '">'
+                    + '<h3 class="h4 mb-3">' + escapeHtml(B.sampleContactTitle) + '</h3>'
+                    + '<div class="mb-2"><div class="form-control text-muted">' + escapeHtml(B.sampleContactName) + '</div></div>'
+                    + '<div class="mb-2"><div class="form-control text-muted">' + escapeHtml(B.sampleContactEmail) + '</div></div>'
+                    + '<div class="mb-2"><div class="form-control text-muted" style="height:96px">' + escapeHtml(B.sampleContactMessage) + '</div></div>'
+                    + '<button class="btn btn-primary" type="button">' + escapeHtml(B.sampleContactButton) + '</button>'
+                    + '</section>',
+                select: true,
+            },
         ];
 
         return blocks.map((block) => ({
