@@ -11,6 +11,19 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.3.0-r1] — 2026-11-09
+
+Revisão 1 da 1.3.0: **o painel de atualização volta a funcionar de ponta a ponta** — corrigida a causa raiz de "As migrations falharam (exit 1)" em toda atualização por pacote desde a 1.2.0. Sem migration nova.
+
+### Corrigido
+- **Toda atualização por pacote falhava no passo de migrations com "exit 1" e rollback**: o `parseArgs` do updater removía os `--` antes de entregar as opções ao `Artisan::call`, então `migrate` recebia `['force' => true]` — que o ArrayInput do Symfony lê como **argumento**, não opção; o comando `migrate` não tem argumento `force` e lança *"The force argument does not exist"*. O `catch (Throwable)` do runner virava isso num "exit 1" mudo, sem nenhuma dica da causa, e o rollback deixava o site na versão antiga — aparentando estar tudo certo. O bug existe desde a 1.2.0 e nenhum teste o pegava porque todos injetam um runner fake que ignora os argumentos. Agora: opções mantêm os `--`, o output do artisan/exception capturada é anexado à mensagem ("Causa: …") e um teste cobre o runner real de ponta a ponta.
+- **Validação em réplica real**: um site 1.2.2 (código + autoload do Windows→Linux) aplicando o pacote 1.3.0 reproduzia o erro exatamente como o log do usuário; com o fix, o mesmo passo retorna `Nothing to migrate` (exit 0).
+
+### Nota
+- **Quem está travado em "As migrations falharam (exit 1)"**: o código que roda o migrate é o **antigo** (o processo web nunca recarrega as classes no meio do update), então nenhum pacote novo resolve sozinho pelo painel. Duas saídas, ambas sem migration pendente entre 1.2.2→1.3.x:
+  1. **Trocar só um arquivo no servidor** (File Manager): sobrescreva `app/Modules/Core/Services/PackageUpdater.php` com a versão deste commit — e aí *Baixar → Instalar* funciona; ou
+  2. **Extração manual** do `sgcore-1.3.0-r1-public_html.zip` por cima (preservando `.env`/`storage`; abra *Configurações → Atualizações* depois, o guardião repara o handler de PHP do cPanel sozinho).
+
 ## [1.3.0] — 2026-11-09
 
 Versão menor com o construtor "enxergando o tema": conversão fiel (estilos do tema carregados na página) + conversão em lote de todas as telas, somada às correções da 1.2.3 e da revisão r1. Sem migration nova.
