@@ -27,10 +27,15 @@ class ThemePageImporter
 
     private const CHROME_CLASSES = ['site-header', 'site-footer', 'main-nav', 'navbar', 'nav-list'];
 
+    /**
+     * Document-head tags. loadHTML flattens the wrapped template, so these can
+     * surface as body-level children; they are metadata, never page content.
+     */
+    private const HEAD_TAGS = ['head', 'meta', 'link', 'title', 'style', 'script', 'noscript', 'base'];
+
     /** data-cms-slot id → builder render-time binding. */
     private const SLOT_BINDINGS = [
         'site.name' => '{site:name}',
-        'site.nam' => '{site:name}',
         'page.title' => '{page:title}',
     ];
 
@@ -159,6 +164,12 @@ class ThemePageImporter
         }
 
         $tag = strtolower($el->nodeName);
+
+        // Flattened document-head tags are metadata, not content — drop them
+        // (and any <style>/<script> the theme kept inline).
+        if (in_array($tag, $this::HEAD_TAGS, true)) {
+            return [];
+        }
 
         // <main> just unwraps into its children.
         if ($tag === 'main') {
@@ -335,7 +346,12 @@ class ThemePageImporter
      */
     private function htmlNode(string $html): array
     {
-        return $this->node('html', 'div', [], [], ['data-pb-code' => $html]);
+        // Same visible placeholder the editor's own HTML block carries, so the
+        // imported block is not an invisible div in the canvas; the payload
+        // lives in the `data-pb-code` trait.
+        return $this->node('html', 'div', [], [
+            $this->textNode('&lt;!-- Escreva seu HTML na aba Propriedades --&gt;'),
+        ], ['data-pb-code' => $html]);
     }
 
     /**
@@ -345,7 +361,19 @@ class ThemePageImporter
      */
     private function node(string $pbType, string $tagName, array $classes, array $children, array $extraAttrs = []): array
     {
+        // GrapesJS resolves component models from the JSON `type` when a
+        // project is loaded (isComponent only runs for HTML parsing), so nodes
+        // must carry the same ids the editor registers (`pb-<type>`), except
+        // image/button, which the editor intentionally leaves on the built-in
+        // models — a `link`-typed anchor is how its own button block serializes.
+        $type = match ($pbType) {
+            'image' => null,
+            'button' => 'link',
+            default => 'pb-'.$pbType,
+        };
+
         return [
+            'type' => $type,
             'tagName' => $tagName,
             'attributes' => array_merge(['data-pb-type' => $pbType], $extraAttrs),
             'classes' => array_values(array_unique($classes)),
