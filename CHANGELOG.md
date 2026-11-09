@@ -4,14 +4,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
+### Adicionado
+- **Bloco "Formulário de contato" no construtor**: páginas públicas com o bloco postam em `/contato/enviar`; o Core maila o destino configurado (setting `mail_to_address`, com fallback para o remetente) com o visitante em Reply-To e o assunto editável do bloco. Proteção tripla: CSRF de sessão, throttle por IP (8/min) e honeypot silencioso; erros de validação voltão com o conteúdo preservado no próprio formulário. Páginas com formulário saem do cache de documento (o token/flash/old são por sessão) e o render funciona até em contexto de template sem request.
+- **"Esqueci minha senha" no login**: rotas de convidado no caminho dinâmico do admin (`/esqueci-senha` e `/redefinir-senha`); o broker gera token de uso único (60 min) entregue por e-mail ao usuário ativo (resposta idêntica para e-mails inexistentes/inativos — sem sondagem de contas); no sucesso a senha é trocada, a sessão regenerada e o usuário cai autenticado no painel.
+
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).
 - Feed RSS/Atom do blog.
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
-- Bloco "Formulário de contato" no construtor com disparo pelo SMTP configurado.
-- Recuperação de senha ("esqueci minha senha") pelo e-mail configurado.
 
 ## [1.4.0] — 2026-11-09
 
