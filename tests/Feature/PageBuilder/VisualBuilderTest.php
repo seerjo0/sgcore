@@ -590,12 +590,67 @@ class VisualBuilderTest extends TestCase
 
         $page->refresh();
 
-        $this->assertStringContainsString('<section', $page->builder_published['html']);
-        $this->assertStringContainsString('Dentro da grade', $page->builder_published['html']);
+        $html = (string) $page->builder_published['html'];
+
+        $this->assertStringContainsString('<section', $html);
+        $this->assertStringContainsString('Dentro da grade', $html);
+        // Nested markup must reach the document live, never HTML-escaped:
+        // an escaped `&lt;h2` is the "preview shows raw HTML" bug.
+        $this->assertStringNotContainsString('&lt;h2', $html);
+        $this->assertStringContainsString('<h2', $html);
+        $this->assertStringNotContainsString('&lt;div', $html);
+
+        // Parse it: the tree must survive as real elements — neither escaped
+        // text nor a broken opening tag.
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+        $this->assertTrue($dom->loadHTML('<!DOCTYPE html><div>'.$html.'</div>'));
+        libxml_clear_errors();
+        $this->assertSame(1, $dom->getElementsByTagName('section')->length);
+        $this->assertSame(1, $dom->getElementsByTagName('h2')->length);
+        $this->assertSame('Dentro da grade', trim($dom->getElementsByTagName('h2')->item(0)->textContent));
 
         $this->get('/pagina')
             ->assertOk()
             ->assertSee('Dentro da grade', false)
-            ->assertSee('pb-section py-5', false);
+            ->assertSee('pb-section py-5', false)
+            ->assertDontSee('&lt;h2', false)
+            ->assertSee('<h2', false);
+    }
+
+    public function test_preview_endpoint_returns_unescaped_nested_markup(): void
+    {
+        $editor = $this->editor();
+        $page = $this->createPage();
+
+        $section = [
+            'tagName' => 'section',
+            'classes' => ['pb-section'],
+            'attributes' => ['data-pb-type' => 'section'],
+            'components' => [
+                [
+                    'tagName' => 'div',
+                    'classes' => ['container'],
+                    'attributes' => ['data-pb-type' => 'container'],
+                    'components' => [$this->heading(content: 'Pré-visualização')],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($editor)
+            ->postJson(route('admin.paginas.builder.preview', $page), [
+                'html' => '<section></section>',
+                'css' => 'h2{}',
+                'json' => json_encode($this->project([$section])),
+            ])
+            ->assertOk();
+
+        $document = $response->json('html');
+
+        $this->assertIsString($document);
+        $this->assertStringContainsString('Pré-visualização', $document);
+        $this->assertStringContainsString('<h2', $document);
+        $this->assertStringNotContainsString('&lt;h2', $document);
+        $this->assertStringNotContainsString('&lt;div', $document);
     }
 }
