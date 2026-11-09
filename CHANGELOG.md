@@ -4,15 +4,23 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
-### Adicionado
-- **E-mail (SMTP) nas Configurações**: seção nova no painel (`/admin/configuracoes`) para configurar o servidor de disparo sem tocar no `.env` — transporte (Sem envio/log ou SMTP), host, porta, criptografia (TLS/SSL/nenhum), usuário, senha (criptografada no banco, nunca reapresentada na tela; salvar em branco mantém a atual, há checkbox para remover) e remetente (e-mail + nome). As Configurações **sobrepõem o `.env` em runtime** (web e CLI) enquanto ativas; com o transporte em "Sem envio" nada é entregue (vai para o log). Card com status + botão **Enviar e-mail de teste** que dispara para o e-mail do usuário logado e mostra a **causa real** de qualquer recusa do servidor SMTP (com rate limit de 3 testes/5 min). Gate `manage-settings` (somente admin).
-
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).
 - Feed RSS/Atom do blog.
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
+- Bloco "Formulário de contato" no construtor com disparo pelo SMTP configurado.
+- Recuperação de senha ("esqueci minha senha") pelo e-mail configurado.
+
+## [1.4.0] — 2026-11-09
+
+Versão menor: **o painel agora configura o envio de e-mails (SMTP)** — formulários, recuperação de senha e avisos podem disparar sem tocar no `.env`. Sem migration nova (as opções vivem na tabela de configurações existente).
+
+### Adicionado
+- **E-mail (SMTP) nas Configurações** (`/admin/configuracoes`, somente admin): seção nova com transporte (`Sem envio (apenas log)` ↔ `SMTP`), host, porta, criptografia (TLS/SSL/nenhuma), usuário, senha e remetente (e-mail + nome). As configurações **sobrepõem o `.env` em runtime** (web e CLI) enquanto ativas — todo disparo via `Mail::` usa o servidor configurado; com transporte em "Sem envio" nada é entregue (fica no log).
+- **Senha tratada como segredo**: cifrada no banco (Crypt), nunca reapresentada na tela; salvar com o campo vazio mantém a atual e o checkbox "Remover a senha salva" apaga.
+- **E-mail de teste**: card com status ("SMTP configurado" / "Sem envio") e botão que envia um e-mail de verificação para o endereço do usuário logado mostrando **a causa real** de qualquer recusa do servidor SMTP na tela (ex.: exigir senha de app do Gmail). Limite de 3 testes por 5 minutos.
 
 ## [1.3.0-r2] — 2026-11-09
 
