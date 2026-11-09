@@ -100,6 +100,14 @@ class MediaStorage
             throw new RuntimeException('Não foi possível ler a imagem.');
         }
 
+        // PNG/WebP keep their alpha only if GD is told to save it; without the
+        // flag the re-encode flattens transparency onto the black default of a
+        // truecolor canvas — the reported "transparent logos got black ground".
+        if (in_array($mime, ['image/png', 'image/webp'], true)) {
+            imagealphablending($source, false);
+            imagesavealpha($source, true);
+        }
+
         $max = (int) config('cms.media.max_dimension', 2000);
 
         if ($width > $max || $height > $max) {
@@ -110,10 +118,16 @@ class MediaStorage
             $resized = imagecreatetruecolor($newWidth, $newHeight);
 
             if (in_array($mime, ['image/png', 'image/webp'], true)) {
+                // Fill transparent with blending OFF, then blend the resample
+                // itself: imagecopyresampled averages RGB *without* weighting
+                // by alpha, so a fully-transparent neighbor (whose RGB is
+                // black) darkens edge pixels — the "dark halo / black ground"
+                // symptom on resized logos. Blending composites correctly.
                 imagealphablending($resized, false);
                 imagesavealpha($resized, true);
                 $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
                 imagefill($resized, 0, 0, $transparent);
+                imagealphablending($resized, true);
             }
 
             imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
@@ -125,6 +139,13 @@ class MediaStorage
         }
 
         $quality = (int) config('cms.media.quality', 85);
+
+        // savealpha survives the resize branch too (the flag lives on the
+        // resized canvas); re-assert here for the no-resize path's source.
+        if (in_array($mime, ['image/png', 'image/webp'], true)) {
+            imagesavealpha($source, true);
+            imagealphablending($source, false);
+        }
 
         ob_start();
 
