@@ -11,6 +11,18 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.3.0] — 2026-11-09
+
+Versão menor com o construtor "enxergando o tema": conversão fiel (estilos do tema carregados na página) + conversão em lote de todas as telas, somada às correções da 1.2.3 e da revisão r1. Sem migration nova.
+
+### Adicionado
+- **Conversão fiel de tema**: ao converter um template pelo menu Aparência, o `styles.css` do tema passa a acompanhar a página (gravado no CSS da página, injetado no Pré-visualizar e no site público), e as referências relativas do CSS (`url(...)`) e das imagens/blocos de código (`src`/`poster`) são reescritas para `/theme-assets/{tema}/...` — a página convertada fica com a cara do tema em qualquer hospedagem, inclusive temas importados via ZIP com assets próprios.
+- **"Converter todas as telas"**: botão novo no card do tema que cria, num clique, uma página rascunho para cada template (home/page/404) — elas aparecem no menu **Páginas**, cada uma com seu projeto pronto no **construtor** — e devolve à lista com o resumo da importação.
+
+### Corrigido
+- **Clique único "Atualizar com progresso"** (revisão r1): a tela de progresso ecoa no stream o modo interno `update`, e o controller só conhecia a palavra `atualizar` — tudo caía no modo instalar (que exige pacote já baixado) e morria em "Nenhum pacote baixado." Os dois vocabulários agora valem, com teste do round-trip real da página.
+- **Site Builder** (1.2.3): views de layout não escapam mais os filhos pré-renderizados (o "código HTML puro" no preview/páginas aninhadas) e a conversão de tema gera blocos tipados (`pb-*`), sem o lixo do `<head>` no canvas.
+
 ## [1.2.3-r1] — 2026-11-09
 
 Revisão 1 da 1.2.3: o **atualizar com progresso em clique único volta a funcionar**. Sem migration nova, sem mudança no Site Builder além da 1.2.3.
