@@ -4,16 +4,20 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
-### Corrigido
-- **Pré-visualização e páginas aninhadas exibiam código HTML puro**: os componentes de layout (`section`, `container`, `row`, `column`, `card`) embrulhavam os filhos já renderizados com `{{ $children }}` — Blade escapava o markup, então qualquer página com blocos aninhados (incluindo toda página convertida de um tema) saía no "Pré-visualizar" do construtor e no site público como **código-fonte HTML literal**, com escape acumulado a cada nível. Agora os filhos são emitidos com `{!! $children !!}` — seguro por construção: cada nó já passou pelo registry allowlist e sanitiza o próprio conteúdo nas views-folha.
-- **Conversão de tema para o construtor quebrava a página**: o importador (1) vazava o `<head>` do template como blocos de "HTML custom" (`<meta>`, `<title>`, `<link>` poluindo o canvas — o libxml achata `html/head/body` quando o arquivo é embrulhado para parsear), (2) não escrevia o campo `type` nos nós, e o `loadProjectData` do GrapesJS **não** roda a detecção por atributo em JSON — os blocos abriam como `divs` sem traits e sem painel de Propriedades. Agora cada nó sai tipado como o editor registra (`pb-<tipo>`; botão = built-in `link`, imagem = built-in `image`), os tags de head são descartados no parse, o bloco de HTML importado mostra o mesmo placeholder do bloco do palet e o slot com typo `site.nam` saiu do `SLOT_BINDINGS`.
-
-### Planejado
+### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).
 - Feed RSS/Atom do blog.
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
+
+## [1.2.3] — 2026-11-09
+
+Correção pontual no Site Builder: o "código HTML puro" no Pré-visualizar/páginas aninhadas e a conversão de tema pelo menu Aparência, que abria blocos sem Propriedades e cheios de lixo do `<head>`. Sem migration nova.
+
+### Corrigido
+- **Pré-visualização e páginas aninhadas exibiam código HTML puro**: os componentes de layout (`section`, `container`, `row`, `column`, `card`) embrulhavam os filhos já renderizados com `{{ $children }}` — Blade escapava o markup, então qualquer página com blocos aninhados (incluindo toda página convertida de um tema) saía no "Pré-visualizar" do construtor e no site público como **código-fonte HTML literal**, com escape acumulado a cada nível. Agora os filhos são emitidos com `{!! $children !!}` — seguro por construção: cada nó já passou pelo registry allowlist e sanitiza o próprio conteúdo nas views-folha.
+- **Conversão de tema para o construtor quebrava a página**: o importador (1) vazava o `<head>` do template como blocos de "HTML custom" (`<meta>`, `<title>`, `<link>` poluindo o canvas — o libxml achata `html/head/body` quando o arquivo é embrulhado para parsear), (2) não escrevia o campo `type` nos nós, e o `loadProjectData` do GrapesJS **não** roda a detecção por atributo em JSON — os blocos abriam como `divs` sem traits e sem painel de Propriedades. Agora cada nó sai tipado como o editor registra (`pb-<tipo>`; botão = built-in `link`, imagem = built-in `image`), os tags de head são descartados no parse, o bloco de HTML importado mostra o mesmo placeholder do bloco do palet e o slot com typo `site.nam` saiu do `SLOT_BINDINGS`.
 
 ## [1.2.2] — 2026-10-23
 
