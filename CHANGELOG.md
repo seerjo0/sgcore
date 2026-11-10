@@ -4,16 +4,20 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 
 ## [Unreleased]
 
-### Corrigido
-- **Construtor: o Pré-visualizar (e autosave/publicar) passavam por cima das edições recentes**: no GrapesJS 0.22 a digitação em texto editável escreve direto no DOM e o model só é atualizado no blur — que nunca chega a ser serializado a tempo. Agora `serializeProject()` espelha o trigger oficial do core (`sync:content`) antes de autosave, preview e publish, com listeners de input durante a edição longa (autosave contínuo) e flush seguro em abas ocultas.
-- **Construtor: canvas mostrando HTML cru**: o CSS da página (nas conversões, o `styles.css` do tema) agora é injetado dentro do iframe do canvas, junto de um baseline visual (seções, containers, headings, formulários, cards, botões) — os blocos aparecem compostos no editor, exatamente como no preview. Regras canvas-only; a saída publicada é intocada.
-
 ### Planned
 - Comentários nos posts do blog.
 - Tags de post (além de categoria única).
 - Feed RSS/Atom do blog.
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
+
+## [1.5.1] — 2026-11-10
+
+Patch: **fidelidade do construtor** — o Pré-visualizar mostra as edições na hora e o canvas nunca mais exibe HTML cru. Sem migration nova.
+
+### Corrigido
+- **Construtor: o Pré-visualizar (e autosave/publicar) passavam por cima das edições recentes**: no GrapesJS 0.22 a digitação em texto editável escreve direto no DOM e o model só é atualizado no blur — que nunca chega a ser serializado a tempo. Agora `serializeProject()` espelha o trigger oficial do core (`sync:content`) antes de autosave, preview e publish, com listeners de input durante a edição longa (autosave contínuo) e flush seguro em abas ocultas.
+- **Construtor: canvas mostrando HTML cru**: o CSS da página (nas conversões, o `styles.css` do tema) agora é injetado dentro do iframe do canvas, junto de um baseline visual (seções, containers, headings, formulários, cards, botões) — os blocos aparecem compostos no editor, exatamente como no preview. Regras canvas-only; a saída publicada é intocada.
 
 ## [1.5.0] — 2026-11-09
 
