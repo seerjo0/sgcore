@@ -490,8 +490,94 @@ import 'grapesjs/dist/css/grapes.min.css';
             }
         }
 
+        applyPageCssToCanvas();
+        applyCanvasDefaults();
+
         loaded = true;
     });
+
+    // Baseline look for builder items INSIDE THE CANVAS ONLY (the published
+    // output keeps using Bootstrap + the page's own CSS). Empty sections and
+    // columns become visibly droppable and theme-less blocks get a composed
+    // default so the editor never shows "raw HTML".
+    function applyCanvasDefaults() {
+        editor.Canvas.addStyles({
+            body: 'margin:0;background:#fff;',
+            'section, header, footer': 'padding: 2.25rem 0;',
+            '.container, .pb-container': 'max-width: 1080px; margin: 0 auto; padding: 0 1.25rem;',
+            '.row': 'display:flex; flex-wrap:wrap; gap:.75rem; margin:0;',
+            '.col, [class*="col-"]': 'flex:1 1 0; min-width:0;',
+            'h1,h2,h3,h4': 'margin:.6rem 0; font-weight:700; line-height:1.2;',
+            p: 'margin:.5rem 0; line-height:1.6; color:#334155;',
+            img: 'max-width:100%; height:auto;',
+            '.btn': 'display:inline-block; padding:.55rem 1.1rem; border-radius:.375rem; background:#4f46e5; color:#fff; text-decoration:none; border:0;',
+            '.card': 'border:1px solid #e2e8f0; border-radius:.5rem; background:#fff;',
+            '.card-body': 'padding:1rem;',
+            '.form-control, select, textarea': 'width:100%; padding:.5rem .75rem; border:1px solid #cbd5e1; border-radius:.375rem;',
+            '.pb-spacer': 'min-height:24px;',
+        });
+    }
+
+    function getCanvasDoc() {
+        const frames = document.querySelectorAll('iframe');
+
+        for (const frame of frames) {
+            const doc = frame.contentDocument;
+
+            if (doc && doc.head && doc.body) {
+                return doc;
+            }
+        }
+
+        return editor.Canvas.getDocument();
+    }
+
+    function applyPageCssToCanvas() {
+        const doc = getCanvasDoc();
+
+        if (!doc || !doc.head) {
+            return;
+        }
+
+        let tag = doc.head.querySelector('[data-pb-page-css]');
+
+        if (!tag) {
+            doc.head.insertAdjacentHTML('beforeend', '<style data-pb-page-css></style>');
+            tag = doc.head.querySelector('[data-pb-page-css]');
+        }
+
+        tag.textContent = customCss || '';
+    }
+
+    /**
+     * Serialize the project INCLUDING a live rich-text edit. GrapesJS 0.22
+     * writes contenteditable changes straight to the DOM and only commits
+     * them to the model inside storeData()/blur — and storeData never runs
+     * with storageManager:false. Without this, the last text typed before
+     * autosave/preview/publish is invisible to the server pipeline (the
+     * reported "preview doesn't show my edits").
+     */
+    async function serializeProject() {
+        try {
+            const em = typeof editor.getModel === 'function' ? editor.getModel() : null;
+            const editing = em && typeof em.getEditing === 'function' ? em.getEditing() : null;
+
+            if (editing) {
+                // the same trigger EditorModel.storeData() fires before saving
+                editing.trigger('sync:content', { noCount: true });
+            }
+        } catch (e) {
+            // no active RTE — nothing to sync
+        }
+
+        // flush the async sync (microtask/macro-task promise chain) — use
+        // setTimeout, NOT requestAnimationFrame: rAF never fires in hidden
+        // tabs/throttled frames and would hang the save forever
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        return editor.getProjectData();
+    }
 
     editor.on('update', () => {
         if (!loaded) {
@@ -517,6 +603,62 @@ import 'grapesjs/dist/css/grapes.min.css';
 
     setupTools();
 
+    let rteListeners = null;
+
+    function markDirty() {
+        if (!loaded) {
+            return;
+        }
+
+        dirty = true;
+        setStatus(S.statusSaving);
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveDraft, 1500);
+    }
+
+    editor.on('component:active', () => {
+        // While a rich-text edit is open GrapesJS keeps the model stale until
+        // blur; listen to raw input events so a long typing session still
+        // autosaves, and detach when the edit ends.
+        const doc = getCanvasDoc();
+
+        if (!doc || !doc.body) {
+            return;
+        }
+
+        let tick = 0;
+
+        const handler = () => {
+            if (tick) {
+                return;
+            }
+
+            tick = window.setTimeout(() => {
+                tick = 0;
+                markDirty();
+            }, 2000);
+        };
+
+        doc.addEventListener('input', handler);
+        doc.addEventListener('keydown', handler);
+
+        rteListeners = { doc, handler };
+    });
+
+    editor.on('component:inactive', () => {
+        if (!rteListeners) {
+            return;
+        }
+
+        const { doc, handler } = rteListeners;
+        doc.removeEventListener('input', handler);
+        doc.removeEventListener('keydown', handler);
+        rteListeners = null;
+
+        // the blur that ends editing also flushes the model — persist it
+        markDirty();
+    });
+
     async function saveDraft() {
         if (saveInFlight) {
             return;
@@ -534,7 +676,7 @@ import 'grapesjs/dist/css/grapes.min.css';
                     'X-CSRF-TOKEN': csrfToken(),
                 },
                 body: JSON.stringify({
-                    data: JSON.stringify(editor.getProjectData()),
+                    data: JSON.stringify(await serializeProject()),
                 }),
             });
 
@@ -561,7 +703,7 @@ import 'grapesjs/dist/css/grapes.min.css';
 
         setStatus(S.statusSaving);
 
-        const project = editor.getProjectData();
+        const project = await serializeProject();
 
         try {
             const response = await fetch(cfg.endpoints.publish, {
@@ -606,7 +748,7 @@ import 'grapesjs/dist/css/grapes.min.css';
     }
 
     async function openPreview() {
-        const project = editor.getProjectData();
+        const project = await serializeProject();
         setStatus(S.statusSaving);
 
         try {
@@ -687,6 +829,7 @@ import 'grapesjs/dist/css/grapes.min.css';
             }
 
             customCss = textarea.value;
+            applyPageCssToCanvas();
             toast(S.cssSaved, 'success');
             closeCssModal();
         } catch (error) {
