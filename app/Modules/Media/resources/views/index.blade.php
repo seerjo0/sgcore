@@ -50,18 +50,25 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             @foreach ($media as $item)
                 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                    <a href="{{ $item->url() }}" target="_blank" rel="noopener" class="relative block bg-slate-900">
-                        @if ($item->isVideo())
-                            <video src="{{ $item->url() }}#t=0.5" preload="metadata" muted playsinline
-                                   class="h-36 w-full object-contain">
+                    @if ($item->isVideo())
+                        <button type="button" data-medialb="{{ $item->url() }}" data-medialb-name="{{ $item->filename }}"
+                                aria-label="{{ __('media.view_video') }}"
+                                class="relative block w-full cursor-zoom-in bg-slate-900 text-left">
+                            <video src="{{ $item->url() }}#t=0.5" preload="metadata" muted playsinline aria-hidden="true"
+                                   class="pointer-events-none h-36 w-full object-contain">
                                 {{ __('media.video_not_supported') }}
                             </video>
                             <span class="absolute left-2 top-2 rounded bg-slate-900/80 px-2 py-0.5 text-xs font-semibold text-white">{{ __('media.badge_video') }}</span>
-                        @else
+                            <span class="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                <span class="grid h-11 w-11 place-items-center rounded-full border border-amber-400/60 bg-slate-900/70 text-lg text-white">▶</span>
+                            </span>
+                        </button>
+                    @else
+                        <a href="{{ $item->url() }}" target="_blank" rel="noopener" class="relative block bg-slate-900">
                             <img src="{{ $item->url() }}" alt="{{ $item->alt ?? $item->filename }}" loading="lazy"
                                  class="h-36 w-full object-cover">
-                        @endif
-                    </a>
+                        </a>
+                    @endif
                     <div class="p-3">
                         <p class="truncate text-sm font-medium" title="{{ $item->filename }}">{{ $item->filename }}</p>
                         <p class="text-xs text-slate-400">
@@ -86,5 +93,57 @@
         <div class="mt-6">
             {{ $media->links() }}
         </div>
+
+        @if ($media->contains(fn ($m) => $m->isVideo()))
+            {{-- Lightbox do painel: play/mídia só no modal (o tile é poster). --}}
+            <div id="media-lightbox" hidden role="dialog" aria-modal="true" aria-label="{{ __('media.view_video') }}"
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-10">
+                <button type="button" data-lb-close aria-label="{{ __('common.close') }}"
+                        class="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-slate-500 bg-slate-900/70 text-white hover:bg-primary-600">✕</button>
+                <video controls playsinline autoplay class="max-h-[80vh] w-auto max-w-full rounded-xl bg-black"></video>
+                <p class="absolute bottom-4 left-1/2 -translate-x-1/2 truncate px-4 text-sm text-slate-300" data-lb-name></p>
+            </div>
+
+            <script>
+                (function () {
+                    var box = document.getElementById('media-lightbox');
+                    if (!box || !box.querySelector('video')) { return; }
+                    var vid = box.querySelector('video');
+                    var nameEl = box.querySelector('[data-lb-name]');
+                    var last = null;
+
+                    function open(src, name) {
+                        last = document.activeElement;
+                        nameEl.textContent = name || '';
+                        vid.src = src;
+                        box.hidden = false;
+                        var p = vid.play();
+                        if (p && p.catch) { p.catch(function () {}); }
+                        box.querySelector('[data-lb-close]').focus();
+                    }
+
+                    function close() {
+                        box.hidden = true;
+                        vid.pause();
+                        vid.removeAttribute('src');
+                        vid.load();
+                        if (last && last.focus) { last.focus(); }
+                    }
+
+                    document.querySelectorAll('[data-medialb]').forEach(function (tile) {
+                        tile.addEventListener('click', function (ev) {
+                            ev.preventDefault();
+                            open(tile.getAttribute('data-medialb'), tile.getAttribute('data-medialb-name'));
+                        });
+                    });
+
+                    box.querySelector('[data-lb-close]').addEventListener('click', close);
+                    box.addEventListener('click', function (ev) { if (ev.target === box) { close(); } });
+                    document.addEventListener('keydown', function (ev) {
+                        if (!box.hidden && ev.key === 'Escape') { close(); }
+                    });
+                })();
+            </script>
+        @endif
     @endif
 @endsection

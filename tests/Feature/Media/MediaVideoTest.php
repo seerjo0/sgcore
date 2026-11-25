@@ -203,13 +203,53 @@ class MediaVideoTest extends TestCase
 
         $html = $this->get('/')->assertOk()->getContent();
 
+        // imagem continua inline
         $this->assertStringContainsString('<img src="/media/'.$image->path.'"', $html);
+
+        // vídeo: tile clicável que ABRE O LIGHTBOX (play só no modal) — o
+        // <video> do tile NÃO tem controls; o src é o poster (#t=0.5).
+        $this->assertStringContainsString('data-lb-src="/media/'.$video->path.'"', $html);
+        $this->assertStringContainsString('pb-lb-video', $html);
+        $this->assertStringContainsString("id='pb-lightbox'", $html);
+
         $this->assertMatchesRegularExpression(
-            '/<video[^>]+src="\/media\/'.preg_quote($video->path, '/').'"[^>]*controls/',
+            '/<video src="\/media\/'.preg_quote($video->path, '/').'#t=0\\.5"[^>]*>/',
             $html
         );
+        $this->assertDoesNotMatchRegularExpression(
+            '/<video src="\/media\/'.preg_quote($video->path, '/').'#t=0\\.5"[^>]*controls/',
+            $html
+        );
+
         $this->assertStringNotContainsString('<img src="/media/'.$video->path.'"', $html);
         $this->assertStringContainsString('Assista', $html);
+    }
+
+    public function test_public_gallery_without_video_has_no_lightbox_snippet(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post(route('admin.midia.store'), ['files' => [$this->fakeImage('foto.jpg')]])
+            ->assertRedirect();
+
+        $image = Medium::query()->firstOrFail();
+
+        $gallery = Gallery::query()->create(['title' => 'SoFoto']);
+        $gallery->items()->create(['media_id' => $image->id, 'sort' => 0]);
+
+        $home = Page::query()->create([
+            'title' => 'Início', 'slug' => 'inicio', 'status' => 'published', 'is_home' => true,
+            'content' => ['body' => ''],
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.aparencia.conteudo.pagina.salvar', $home), ['slots' => ['home.gallery' => (string) $gallery->id]])
+            ->assertRedirect();
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('pb-lb-video', $html);
+        $this->assertStringNotContainsString("id='pb-lightbox'", $html);
     }
 
     public function test_image_slot_rejects_a_video(): void

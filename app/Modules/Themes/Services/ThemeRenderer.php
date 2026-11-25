@@ -82,7 +82,24 @@ class ThemeRenderer
         $this->rewriteStylesheets($doc, $theme);
         $this->applySeo($doc, $theme, $page, $template);
 
-        return $this->html($doc->saveHTML() ?: '', $status);
+        $html = $doc->saveHTML() ?: '';
+
+        // Gallery videos need the lightbox CSS+JS. Injecting as raw string
+        // (right before </body>) keeps the style/script verbatim — routing it
+        // through the DOM would escape their operators. Only when present.
+        if (str_contains($html, 'class="pb-lb-video"')) {
+            $snippet = $this->lightboxSnippet();
+
+            $body = stripos($html, '</body>');
+
+            if ($body !== false) {
+                $html = substr($html, 0, $body).$snippet.substr($html, $body);
+            } else {
+                $html .= $snippet;
+            }
+        }
+
+        return $this->html($html, $status);
     }
 
     /**
@@ -469,20 +486,38 @@ class ThemeRenderer
 
             $figure = $doc->createElement('figure');
 
+            $caption = trim((string) $item->caption);
+
             if ($media->isVideo()) {
+                // Tile = poster frame + play icon; o play de verdade vive só
+                // no lightbox (o <video controls> embutido engolia o clique
+                // que deveria abrir o modal).
+                $figure->setAttribute('class', 'pb-lb-video');
+                $figure->setAttribute('data-lb-src', '/media/'.$media->path);
+                $figure->setAttribute('data-lb-caption', $caption);
+                $figure->setAttribute('role', 'button');
+                $figure->setAttribute('tabindex', '0');
+                $figure->setAttribute('aria-label', (string) __('media.view_video'));
+
                 $video = $doc->createElement('video');
-                $video->setAttribute('src', '/media/'.$media->path);
-                $video->setAttribute('controls', 'controls');
+                $video->setAttribute('src', '/media/'.$media->path.'#t=0.5');
                 $video->setAttribute('preload', 'metadata');
+                $video->setAttribute('muted', 'muted');
+                $video->setAttribute('playsinline', 'playsinline');
+                $video->setAttribute('aria-hidden', 'true');
                 $figure->appendChild($video);
+
+                $icon = $doc->createElement('span');
+                $icon->setAttribute('class', 'pb-lb-icon');
+                $icon->setAttribute('aria-hidden', 'true');
+                $icon->appendChild($doc->createTextNode('▶'));
+                $figure->appendChild($icon);
             } else {
                 $img = $doc->createElement('img');
                 $img->setAttribute('src', '/media/'.$media->path);
                 $img->setAttribute('alt', trim((string) ($item->caption ?: $media->alt ?: '')));
                 $figure->appendChild($img);
             }
-
-            $caption = trim((string) $item->caption);
 
             if ($caption !== '') {
                 $figcaption = $doc->createElement('figcaption');
@@ -492,6 +527,19 @@ class ThemeRenderer
 
             $element->appendChild($figure);
         }
+    }
+
+    /**
+     * Self-contained lightbox (CSS+JS) injected once, only when the page
+     * actually has gallery videos (.pb-lb-video). Plays media in a modal —
+     * click/Esc/backdrop close, ←/→ navigate, theme-agnostic styles.
+     */
+    private function lightboxSnippet(): string
+    {
+        return <<<'HTML'
+<style>.pb-lb-video{position:relative;cursor:zoom-in;overflow:hidden;border-radius:8px;background:#0b0e13}.pb-lb-video video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;pointer-events:none}.pb-lb-video:focus-visible{outline:2px solid #b8862b;outline-offset:2px}.pb-lb-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:rgba(11,14,19,.7);color:#f4f1ea;font-size:1rem;border:1px solid rgba(216,176,74,.6);pointer-events:none}#pb-lightbox{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(8,10,14,.93);padding:clamp(12px,4vw,40px)}#pb-lightbox[hidden]{display:none}#pb-lightbox .pb-lb-stage{margin:0;display:flex;flex-direction:column;align-items:center;gap:.8rem;max-width:min(1200px,94vw)}#pb-lightbox video{display:block;max-width:min(94vw,1200px);max-height:80vh;border-radius:10px;background:#0b0e13;box-shadow:0 18px 60px rgba(0,0,0,.55)}#pb-lightbox .pb-lb-cap{color:#d8d5cc;font-size:.95rem;text-align:center}#pb-lightbox .pb-lb-cap:empty{display:none}#pb-lightbox button{position:absolute;width:44px;height:44px;border-radius:50%;border:1px solid rgba(216,176,74,.5);background:rgba(11,14,19,.55);color:#f4f1ea;cursor:pointer;font-size:1.1rem;line-height:1}#pb-lightbox button:hover{background:rgba(184,134,43,.85)}#pb-lightbox .pb-lb-x{top:12px;right:14px}#pb-lightbox .pb-lb-prev{left:clamp(8px,2vw,22px);top:50%;margin-top:-22px}#pb-lightbox .pb-lb-next{right:clamp(8px,2vw,22px);top:50%;margin-top:-22px}</style>
+<script>(function(){var figs=[].slice.call(document.querySelectorAll('.pb-lb-video'));if(!figs.length){return}var box=document.createElement('div');box.id='pb-lightbox';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.hidden=true;box.innerHTML='<button type="button" class="pb-lb-x" aria-label="✕">✕</button><button type="button" class="pb-lb-prev" aria-label="‹">‹</button><button type="button" class="pb-lb-next" aria-label="›">›</button><figure class="pb-lb-stage"><video controls autoplay playsinline></video><figcaption class="pb-lb-cap"></figcaption></figure>';document.body.appendChild(box);var vid=box.querySelector('video'),cap=box.querySelector('.pb-lb-cap'),idx=0,last=null;function show(i){idx=i;var f=figs[i];vid.src=f.getAttribute('data-lb-src')||'';cap.textContent=f.getAttribute('data-lb-caption')||''}function open(i){last=document.activeElement;box.hidden=false;show(i);try{vid.play().catch(function(){})}catch(e){}box.querySelector('.pb-lb-x').focus()}function close(){box.hidden=true;vid.pause();vid.removeAttribute('src');vid.load();if(last&&last.focus){last.focus()}}function nav(d){show((idx+d+figs.length)%figs.length);try{vid.play().catch(function(){})}catch(e){}}figs.forEach(function(f,i){f.addEventListener('click',function(e){e.preventDefault();open(i)});f.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open(i)}})});box.querySelector('.pb-lb-x').addEventListener('click',close);box.querySelector('.pb-lb-prev').addEventListener('click',function(){nav(-1)});box.querySelector('.pb-lb-next').addEventListener('click',function(){nav(1)});box.addEventListener('click',function(e){if(e.target===box){close()}});document.addEventListener('keydown',function(e){if(box.hidden){return}if(e.key==='Escape'){close()}else if(e.key==='ArrowLeft'){nav(-1)}else if(e.key==='ArrowRight'){nav(1)}})})();</script>
+HTML;
     }
 
     /**

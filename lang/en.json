@@ -258,6 +258,7 @@
     "media.uploaded_at": "Uploaded at:",
     "media.use_selected": "Use selected",
     "media.video_not_supported": "Your browser does not support embedded video.",
+    "media.view_video": "Play video",
     "menus.add_item": "Add item",
     "menus.add_item_btn": "Add item",
     "menus.add_item_help": "Items can be nested under another top-level item (1 level).",
