@@ -11,6 +11,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.7.1] — 2026-11-25
+
+Patch de **usabilidade**: os três uploads de ZIP do painel ganharam o botão explícito de escolher arquivo, igual ao da Biblioteca de mídia. Sem migration nova.
+
+### Corrigido
+- **Botão "escolher arquivo" nos uploads de Módulos, Aparência e Atualizações**: essas telas usavam o `input type="file"` nativo "cru" (texto discreto, sem nada chamando para clicar). Agora compartilham o mesmo estilo da página de Mídia — botão `::file-selector-button` em `primary-600`, fonte semibold, branco — deixando o envio de tema/módulo/pacote .zip claramente clicável. Na tela **Atualizações**, o formulário de "Enviar e atualizar" (pacote offline) obedece a mesma trava do fluxo Baixar/Instalar (só aparece quando o ambiente permite aplicar atualização).
+
 ## [1.7.0] — 2026-11-25
 
 Versão menor: **gestão do que está instalado** — dá para excluir um tema pela interface e reenviar o ZIP de um tema/módulo já instalado para atualizá-lo no lugar. Sem migration nova.
