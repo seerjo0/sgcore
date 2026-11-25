@@ -20,7 +20,7 @@
         <div class="min-w-64">
             <label for="file" class="block text-sm font-medium text-slate-700">{{ __('themes.import_label') }}</label>
             <input id="file" type="file" name="file" accept=".zip,application/zip" required
-                   class="mt-1 block w-full text-sm text-slate-600">
+                   class="mt-1 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-500">
             @error('file')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror

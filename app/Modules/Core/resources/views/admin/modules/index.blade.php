@@ -22,7 +22,7 @@
         <div class="min-w-64">
             <label for="module" class="block text-sm font-medium text-slate-700">{{ __('modules.import_label') }}</label>
             <input id="module" type="file" name="module" accept=".zip,application/zip" required
-                   class="mt-1 block w-full text-sm text-slate-600">
+                   class="mt-1 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-500">
             @error('module')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror

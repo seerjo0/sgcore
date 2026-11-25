@@ -230,7 +230,7 @@
                         @csrf
                         <label class="block text-xs font-medium text-slate-600">{{ __('updater.package_upload') }}</label>
                         <input type="file" name="package" accept=".zip,application/zip" required
-                               class="block w-full text-sm text-slate-600">
+                               class="block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-500">
                         <p class="text-xs text-slate-400">{{ __('updater.apply_confirm_label', ['version' => $update['version'] ?? $update['tag'] ?? $current]) }}</p>
                         <input name="confirm" required placeholder="{{ $update['version'] ?? $update['tag'] ?? __('updater.current') }}"
                                class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm">
