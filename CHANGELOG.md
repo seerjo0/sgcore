@@ -11,6 +11,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.7.0] — 2026-11-25
+
+Versão menor: **gestão do que está instalado** — dá para excluir um tema pela interface e reenviar o ZIP de um tema/módulo já instalado para atualizá-lo no lugar. Sem migration nova.
+
+### Adicionado
+- **Excluir tema** (`Aparência`): todo tema importado que não esteja em uso ganha o botão "Excluir tema" (com confirmação). A exclusão remove a pasta do tema do storage e limpa os valores de slots gravados por página daquele tema; as páginas já CONVERTIDAS pelo construtor continuam funcionando (carregam o próprio conteúdo). Guardas: temas embutidos (classic/gallery/moderno) são irredutíveis, o tema ativo precisa ser trocado antes de excluir, e um tema quebrado por ZIP inválido pode ser excluído — é o remédio previsto.
+- **Reenvio atualiza instalação**: enviar por upload um ZIP cujo identificador já existe (tema ou módulo) **substitui** a instalação anterior em vez de ser rejeitado — a pasta antiga é apagada antes da cópia (nenhum arquivo órfão do pacote anterior) e o painel anuncia "atualizado com o arquivo enviado". O estado do módulo (ativo/inativo, data de instalação) é preservado. Válvula de segurança: itens **embutidos** no core nunca são substituídos (mensagem própria), e ao atualizar um módulo as dependências são validadas **antes** de destruir a versão que estava funcionando (erro claro, nada se perde).
+- **Cache de views na atualização de módulo**: ao substituir um módulo importado, o Blade compilado antigo é descartado (`view:clear` interno preservando o diretório) — a interface nova aparece imediatamente, sem templates mesclados.
+- Textos de ajuda dos formulários de upload explicam o comportamento de reenvio (pt-BR/en).
+
 ## [1.6.0] — 2026-11-25
 
 Versão menor: **vídeo na biblioteca de mídia e nas galerias** — envie MP4/WebM/MOV/OGV pelo painel e eles tocam no site. Sem migration nova (a tabela `media` já armazenava tipo e caminho; o limite sai das opções de config).
