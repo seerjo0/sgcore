@@ -11,6 +11,20 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.6.0] — 2026-11-25
+
+Versão menor: **vídeo na biblioteca de mídia e nas galerias** — envie MP4/WebM/MOV/OGV pelo painel e eles tocam no site. Sem migration nova (a tabela `media` já armazenava tipo e caminho; o limite sai das opções de config).
+
+### Adicionado
+- **Upload de vídeos na Biblioteca de mídia**: MP4, WebM, MOV e OGV são aceitos lado a lado com as imagens (múltiplos arquivos por vez). Diferente das imagens, o arquivo é guardado **sem recodificar** (sem GD/ffmpeg): bytes verbatim, sem perdas. Limite próprio e maior — `cms.media.max_video_bytes` (padrão 100 MB, configurável via `CMS_MEDIA_MAX_VIDEO_BYTES`), enquanto imagens continuam em `max_upload_bytes` (10 MB). A validação aceita inclusive as variantes `application/mp4`/`application/ogg` que algumas versões do libmagic reportam para esses contêineres.
+- **Player em todo o painel**: a biblioteca, a tela de edição do arquivo, as galerias e o media-picker (inclusive o navegador de mídia dentro do construtor) mostram o vídeo com prévia do primeiro frame (`#t=0.5`), badge "Vídeo" e metadados por espécie (imagens: largura×altura KB; vídeos: MB). O JSON do picker passou a expor o campo `type` (`image`/`video`).
+- **Streaming com seek**: a rota pública `/media/{path}` serve vídeos com Content-Type correto e suporte a **Range/206** — o player do navegador consegue avançar/voltar mesmo em arquivos grandes.
+- **Galerias aceitam vídeos**: um item de vídeo numa galeria renderiza `<video controls preload="metadata">` na página pública (tema clássico), com legenda quando houver.
+- **Slots de imagem protegidos**: slots `image`/`logo` do tema agora **rejeitam vídeos explicitamente** (mensagem em pt-BR) — antes um vídeo selecionado no picker quebraria o `<img>` público silenciosamente.
+
+### Técnica
+- `MediaStorage::classify()`/`detectKind()` centralizam a checagem de espécie (mime farejado manda para imagens — cliente spoofado nunca chega ao GD; para vídeos aceita farejado ou declarado). `Medium::isVideo()`/`isImage()`/`kind()`; factory com estado `video()`. Nova regra `ValidMediaUpload` (tipo + tamanho por espécie).
+
 ## [1.5.1] — 2026-11-10
 
 Patch: **fidelidade do construtor** — o Pré-visualizar mostra as edições na hora e o canvas nunca mais exibe HTML cru. Sem migration nova.
