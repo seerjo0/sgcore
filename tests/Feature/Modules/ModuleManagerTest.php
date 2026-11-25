@@ -353,17 +353,71 @@ class ModuleManagerTest extends TestCase
         $this->assertNull($this->state()->installedAt('meu_modulo'));
     }
 
-    public function test_duplicate_module_slug_is_rejected(): void
+    public function test_reupload_updates_installed_module(): void
     {
         $admin = User::factory()->admin()->create();
 
-        $zip = $this->moduleZip('meu-modulo.zip', $this->validEntries());
-
-        $this->actingAs($admin)->post('/admin/modulos', ['module' => $zip]);
         $this->actingAs($admin)
-            ->post('/admin/modulos', ['module' => $this->moduleZip('meu-modulo.zip', $this->validEntries())])
+            ->post('/admin/modulos', ['module' => $this->moduleZip('meu-modulo.zip', $this->validEntries([
+                'meu_modulo/legado.txt' => 'sobras do zip anterior',
+            ]))])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)
+            ->post('/admin/modulos', ['module' => $this->moduleZip('meu-modulo.zip', $this->validEntries([
+                'meu_modulo/module.json' => json_encode([
+                    'name' => 'Meu Módulo',
+                    'version' => '9.9.9',
+                    'requires' => [],
+                ], JSON_UNESCAPED_SLASHES),
+            ]))])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertStringContainsString('9.9.9', (string) file_get_contents($this->storagePath.'/meu_modulo/module.json'));
+        // a pasta inteira é substituída: nenhum arquivo órfão do ZIP anterior
+        $this->assertFileDoesNotExist($this->storagePath.'/meu_modulo/legado.txt');
+        // estado preservado: continua instalado e ativo
+        $this->assertNotNull($this->state()->installedAt('meu_modulo'));
+        $this->assertFalse($this->state()->isInactive('meu_modulo'));
+    }
+
+    public function test_reupload_with_lost_dependency_keeps_the_working_version(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post('/admin/modulos', ['module' => $this->moduleZip('meu-modulo.zip', $this->validEntries())]);
+
+        $this->actingAs($admin)
+            ->post('/admin/modulos', ['module' => $this->moduleZip('meu-modulo.zip', $this->validEntries([
+                'meu_modulo/module.json' => json_encode([
+                    'name' => 'Meu Módulo',
+                    'version' => '9.9.9',
+                    'requires' => ['modulo_inexistente'],
+                ], JSON_UNESCAPED_SLASHES),
+            ]))])
             ->assertRedirect()
             ->assertSessionHasErrors('module');
+
+        // a dependência faltando bloqueia ANTES de destruir a versão boa
+        $this->assertStringContainsString('1.2.0', (string) file_get_contents($this->storagePath.'/meu_modulo/module.json'));
+    }
+
+    public function test_bundled_module_cannot_be_replaced_by_upload(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->post('/admin/modulos', ['module' => $this->moduleZip('media.zip', [
+                'media/module.json' => json_encode(['name' => 'Media Clone', 'slug' => 'media'], JSON_UNESCAPED_SLASHES),
+                'media/Providers/MediaServiceProvider.php' => '<?php',
+            ])])
+            ->assertRedirect()
+            ->assertSessionHasErrors('module');
+
+        $this->assertDirectoryDoesNotExist($this->storagePath.'/media');
     }
 
     public function test_only_inactive_uploaded_modules_can_be_deleted(): void

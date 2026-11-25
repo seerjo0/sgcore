@@ -17,7 +17,16 @@ class Theme
         public readonly bool $builtin,
         public readonly bool $valid,
         public readonly ?string $error = null,
+        public readonly bool $updated = false,
     ) {}
+
+    /**
+     * Copy flagged as "just replaced by an upload" (the slug already existed).
+     */
+    public function withUpdated(bool $updated = true): self
+    {
+        return new self($this->slug, $this->path, $this->manifest, $this->builtin, $this->valid, $this->error, $updated);
+    }
 
     public function name(): string
     {

@@ -3,6 +3,7 @@
 namespace App\Modules\Themes\Http\Controllers\Admin;
 
 use App\Modules\Core\Services\Settings;
+use App\Modules\Themes\Models\Content;
 use App\Modules\Themes\Services\ThemeDiscovery;
 use App\Modules\Themes\Services\ThemeImporter;
 use App\Modules\Themes\Services\ThemeImportException;
@@ -10,6 +11,7 @@ use App\Modules\Themes\Services\ThemePageImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\File;
 use Illuminate\View\View;
 
 class AppearanceController extends Controller
@@ -50,7 +52,45 @@ class AppearanceController extends Controller
             return back()->withErrors(['file' => $exception->getMessage()]);
         }
 
-        return back()->with('success', __('themes.imported_success', ['name' => $theme->name()]));
+        $message = $theme->updated
+            ? __('themes.updated_success', ['name' => $theme->name()])
+            : __('themes.imported_success', ['name' => $theme->name()]);
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * POST /admin/aparencia/{slug}/excluir — remove an imported theme.
+     *
+     * Guardas: temas embutidos são imutáveis; o tema ativo continua no ar
+     * até outro ser ativado (um site sem tema = 500); um ZIP corrompido
+     * (tema inválido) pode — e deve — ser excluído/reenviado.
+     */
+    public function destroy(Request $request, string $slug): RedirectResponse
+    {
+        $theme = $this->discovery->find($slug);
+
+        if ($theme === null) {
+            return back()->withErrors(['theme' => __('themes.delete_missing')]);
+        }
+
+        if ($theme->builtin) {
+            return back()->withErrors(['theme' => __('themes.delete_bundled', ['name' => $theme->name()])]);
+        }
+
+        $active = (string) $this->settings->get('active_theme', config('cms.themes.default_theme', 'classic'));
+
+        if ($active === $theme->slug) {
+            return back()->withErrors(['theme' => __('themes.delete_active', ['name' => $theme->name()])]);
+        }
+
+        File::deleteDirectory($theme->path);
+
+        // Valores de slots gravados por tema (ContentStore) — sem limpeza,
+        // virariam linhas órfãs para sempre.
+        Content::query()->where('theme', $theme->slug)->delete();
+
+        return back()->with('success', __('themes.deleted', ['name' => $theme->name()]));
     }
 
     /**

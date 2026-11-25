@@ -29,8 +29,13 @@ class ThemeImporter
 
         $discovery = app(ThemeDiscovery::class);
 
-        if ($discovery->find($slug) !== null) {
-            throw new ThemeImportException("Já existe um tema com o identificador \"{$slug}\".");
+        // Reenviar o arquivo de um tema importado ATUALIZA aquele tema (fluxo
+        // normal de manutenção de tema de cliente). Temas embutidos (ex.:
+        // classic) vivem fora do storage de uploads e nunca são substituídos.
+        $existing = $discovery->find($slug);
+
+        if ($existing !== null && $existing->builtin) {
+            throw new ThemeImportException("O tema embutido \"{$slug}\" não pode ser substituído por upload.");
         }
 
         $root = $discovery->storagePath();
@@ -59,9 +64,21 @@ class ThemeImporter
             }
 
             $target = $root.'/'.$slug;
+            $replaced = $existing !== null;
 
-            if (File::isDirectory($target)) {
+            if ($replaced && ! File::isDirectory($target)) {
+                // tema conhecido mas pasta sumiu do disco — instalar do zero
+                $replaced = false;
+            }
+
+            if (File::isDirectory($target) && ! $replaced) {
                 throw new ThemeImportException("Já existe um tema com o identificador \"{$slug}\".");
+            }
+
+            // Atualização: apaga a versão antiga antes de copiar — senão o
+            // copyDirectory deixaria arquivos órfãos do ZIP anterior.
+            if ($replaced) {
+                File::deleteDirectory($target);
             }
 
             if ($source === $temp) {
@@ -76,8 +93,10 @@ class ThemeImporter
             throw $exception;
         }
 
-        return app(ThemeDiscovery::class)->find($slug)
+        $theme = app(ThemeDiscovery::class)->find($slug)
             ?? new Theme($slug, $root.'/'.$slug, $manifest, false, true);
+
+        return $theme->withUpdated($replaced ?? false);
     }
 
     /**

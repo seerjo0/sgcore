@@ -61,7 +61,11 @@ class ModuleController extends Controller
         $unsatisfied = $this->inactiveRequirements($module);
 
         if ($unsatisfied !== []) {
-            File::deleteDirectory($module->path);
+            // em atualização o importador já validou as dependências antes de
+            // substituir; nunca apagar aqui destruiria a versão boa.
+            if (! $module->updated) {
+                File::deleteDirectory($module->path);
+            }
 
             return back()->withErrors(['module' => __('modules.requires_inactive', [
                 'name' => $module->name(),
@@ -71,7 +75,27 @@ class ModuleController extends Controller
 
         $this->state->rememberInstall($module->slug, $module->version());
 
+        if ($module->updated) {
+            // Views Blade compiladas podem carregar templates do ZIP antigo.
+            $this->purgeCompiledViews();
+
+            return back()->with('success', __('modules.updated_success', ['name' => $module->name()]));
+        }
+
         return back()->with('success', __('modules.imported_success', ['name' => $module->name()]));
+    }
+
+    /**
+     * Esvazia o cache de views compiladas (apaga só os .php; o .gitignore do
+     * diretório — e o próprio diretório — intactos, como o `view:clear`).
+     */
+    private function purgeCompiledViews(): void
+    {
+        $compiled = (string) (config('view.compiled') ?: storage_path('framework/views'));
+
+        foreach (glob($compiled.'/*.php') ?: [] as $file) {
+            @unlink($file);
+        }
     }
 
     /**

@@ -27,7 +27,16 @@ class Module
         public readonly ?string $error = null,
         public readonly array $requires = [],
         public readonly ?string $installedAt = null,
+        public readonly bool $updated = false,
     ) {}
+
+    /**
+     * Copy flagged as "just replaced by an upload" (the slug already existed).
+     */
+    public function withUpdated(bool $updated = true): self
+    {
+        return new self($this->slug, $this->path, $this->manifest, $this->source, $this->valid, $this->error, $this->requires, $this->installedAt, $updated);
+    }
 
     /**
      * Normalize a folder name into a module slug (lowercase, "_" separator,

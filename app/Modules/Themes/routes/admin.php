@@ -9,6 +9,7 @@ Route::middleware('can:manage-appearance')->group(function (): void {
         Route::get('/', [AppearanceController::class, 'index'])->name('index');
         Route::post('/', [AppearanceController::class, 'store'])->name('store');
         Route::post('/ativar', [AppearanceController::class, 'activate'])->name('ativar');
+        Route::post('/{slug}/excluir', [AppearanceController::class, 'destroy'])->name('excluir');
         Route::post('/importar', [AppearanceController::class, 'import'])->name('importar')->middleware('can:manage-pages');
 
         Route::get('/conteudo', [ThemeContentController::class, 'global'])->name('conteudo');

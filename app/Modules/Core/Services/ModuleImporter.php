@@ -31,8 +31,12 @@ class ModuleImporter
             throw new ModuleImportException('Não foi possível derivar um identificador do arquivo enviado.');
         }
 
-        if ($this->discovery->find($candidate) !== null) {
-            throw new ModuleImportException("Já existe um módulo com o identificador \"{$candidate}\".");
+        $existing = $this->discovery->find($candidate);
+
+        // Reenviar o ZIP de um módulo importado ATUALIZA aquele módulo. Módulos
+        // embutidos (o core) nunca são substituídos por upload.
+        if ($existing !== null && $existing->isBundled()) {
+            throw new ModuleImportException("O módulo embutido \"{$candidate}\" não pode ser substituído por upload.");
         }
 
         $root = $this->discovery->storagePath();
@@ -73,9 +77,40 @@ class ModuleImporter
             }
 
             $target = $root.'/'.$slug;
+            $existingTarget = $slug === $candidate ? $existing : $this->discovery->find($slug);
+            $replaced = $existingTarget !== null;
 
-            if ($this->discovery->find($slug) !== null || File::isDirectory($target)) {
+            if ($replaced) {
+                if ($existingTarget->isBundled()) {
+                    throw new ModuleImportException("O módulo embutido \"{$slug}\" não pode ser substituído por upload.");
+                }
+
+                if (! File::isDirectory($target)) {
+                    // módulo conhecido mas pasta sumiu do disco — instalar do zero
+                    $replaced = false;
+                }
+            }
+
+            if (File::isDirectory($target) && ! $replaced) {
                 throw new ModuleImportException("Já existe um módulo com o identificador \"{$slug}\".");
+            }
+
+            // Atualização: Dependências precisam continuar satisfeitas ANTES
+            // de destruir a versão boa; e a pasta antiga sai primeiro, senão o
+            // copyDirectory deixaria arquivos órfãos do ZIP anterior.
+            if ($replaced) {
+                $state = app(ModuleState::class);
+
+                foreach (array_values(array_filter((array) ($manifest['requires'] ?? []), 'is_string')) as $dependency) {
+                    if ($this->discovery->find($dependency) === null || $state->isInactive($dependency)) {
+                        throw new ModuleImportException(__('modules.requires_inactive', [
+                            'name' => (string) ($manifest['name'] ?? $slug),
+                            'missing' => $dependency,
+                        ]));
+                    }
+                }
+
+                File::deleteDirectory($target);
             }
 
             if ($source === $temp) {
@@ -90,8 +125,10 @@ class ModuleImporter
             throw $exception;
         }
 
-        return $this->discovery->find($slug)
+        $module = $this->discovery->find($slug)
             ?? new Module($slug, $target, $manifest, Module::UPLOADED, true);
+
+        return $module->withUpdated($replaced ?? false);
     }
 
     /**

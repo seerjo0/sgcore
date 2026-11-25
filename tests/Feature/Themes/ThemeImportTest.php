@@ -41,7 +41,7 @@ class ThemeImportTest extends TestCase
      *
      * @param  array<string, string>  $entries
      */
-    private function zip(array $entries): UploadedFile
+    private function zip(array $entries, string $filename = 'meu-tema.zip'): UploadedFile
     {
         $path = tempnam(sys_get_temp_dir(), 'themezip').'.zip';
 
@@ -54,7 +54,7 @@ class ThemeImportTest extends TestCase
 
         $zip->close();
 
-        return new UploadedFile($path, 'meu-tema.zip', 'application/zip', null, true);
+        return new UploadedFile($path, $filename, 'application/zip', null, true);
     }
 
     /**
@@ -141,14 +141,32 @@ class ThemeImportTest extends TestCase
         ])));
     }
 
-    public function test_existing_theme_slug_is_rejected(): void
+    public function test_reupload_updates_installed_theme(): void
     {
-        app(ThemeImporter::class)->import($this->zip($this->entries()));
+        $theme = app(ThemeImporter::class)->import($this->zip($this->entries([
+            'index.html' => '<html><body>VERSAO-ANTIGA</body></html>',
+            'legado.txt' => 'sobras do zip anterior',
+        ])));
+        $this->assertFalse($theme->updated);
 
+        $updated = app(ThemeImporter::class)->import($this->zip($this->entries([
+            'index.html' => '<html><body>VERSAO-NOVA</body></html>',
+        ])));
+
+        $this->assertTrue($updated->updated);
+        $this->assertSame('meu-tema', $updated->slug);
+        $this->assertTrue($updated->valid);
+        $this->assertStringContainsString('VERSAO-NOVA', (string) file_get_contents($updated->path.'/index.html'));
+        // atualização substitui a pasta inteira: nada de arquivo órfão do ZIP velho
+        $this->assertFileDoesNotExist($updated->path.'/legado.txt');
+    }
+
+    public function test_bundled_theme_cannot_be_replaced_by_upload(): void
+    {
         $this->expectException(ThemeImportException::class);
-        $this->expectExceptionMessage('Já existe');
+        $this->expectExceptionMessage('não pode ser substituído');
 
-        app(ThemeImporter::class)->import($this->zip($this->entries()));
+        app(ThemeImporter::class)->import($this->zip($this->entries(), 'classic.zip'));
     }
 
     public function test_trashed_zip_is_rejected(): void
