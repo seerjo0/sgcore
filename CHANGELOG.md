@@ -11,6 +11,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.9.0] — 2026-11-25
+
+Versão menor: **ordem de exibição manual das galerias** — setas ↑/↓ na tela de Galerias definem qual aparece primeiro nos temas, nos seletores e nos módulos.
+
+### Adicionado
+- **Ordem de galerias no painel** (`Mídia → Galerias`): coluna "Ordem" com botões ↑/↓ em cada linha (desabilitados nas pontas). O clique troca a galeria de posição com a vizinha e vale imediatamente para tudo que lista galerias: a tela, o seletor de galeria dos slots de tema (`Aparência → Editar conteúdo`) e — para quem usa — módulos como o *Galerias Alliance* (tema/themes e o JSON `galerias/ultimas.json` respeitam `galleries.sort_order`).
+- **`galleries.sort_order`** (migration): seeded preservando a ordem pública histórica (mais recente primeiro; empate de criação = maior id primeiro). Galeria nova entra no topo, como antes.
+- `Gallery::scopeOrdered()` passa a ser a ordem canônica de listagem; `moveItem` das fotos/vídeos dentro da galeria permanece independente (ordem interna de itens).
+
 ## [1.8.0] — 2026-11-25
 
 Versão menor: **play de vídeo só no lightbox** — os tiles de vídeo viraram pôsteres clicáveis e a reprodução acontece exclusivamente no modal. Sem migration nova.
