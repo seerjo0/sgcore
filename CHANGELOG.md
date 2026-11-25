@@ -11,6 +11,17 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionado
 - API headless (`/api/v1/posts`, `/api/v1/pages`).
 - Multi-idioma de conteúdo por registro.
 
+## [1.8.0] — 2026-11-25
+
+Versão menor: **play de vídeo só no lightbox** — os tiles de vídeo viraram pôsteres clicáveis e a reprodução acontece exclusivamente no modal. Sem migration nova.
+
+### Alterado
+- **Galerias públicas (renderizador clássico)**: o tile de vídeo era um `<video controls>` embutido — o clique ia para o play nativo e nunca abria nada. Agora o tile é um **pôster clicável** (frame inicial + ícone ▶, acessível por teclado) que abre um **lightbox autossuficiente**: player com `controls autoplay`, navegação ‹ › entre os vídeos da galeria, legenda do item, fechar por ×/Esc/clique no fundo, foco devolvido ao gatilho. O CSS+JS do lightbox (~2 KB) só entra na página quando ela tem vídeo — páginas só-foto seguem byte a byte iguais.
+- **Biblioteca de mídia (painel)**: clicar num vídeo não abre mais o arquivo cru em outra aba — agora abre o **modal do painel** com player, nome do arquivo e os mesmos gestos de fechar. Imagens mantêm o link normal; a tela de edição do arquivo segue com o player grande (é a visão de detalhe).
+
+### Mantido
+- O bloco **Vídeo do construtor** continua com player inline: ali o vídeo é conteúdo dedicado da página, não miniatura de grade.
+
 ## [1.7.1] — 2026-11-25
 
 Patch de **usabilidade**: os três uploads de ZIP do painel ganharam o botão explícito de escolher arquivo, igual ao da Biblioteca de mídia. Sem migration nova.
