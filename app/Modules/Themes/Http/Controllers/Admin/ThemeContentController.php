@@ -249,7 +249,7 @@ class ThemeContentController extends Controller
             'values' => $values,
             'previews' => $this->previews($specs, $values),
             'pages' => Page::query()->orderByDesc('is_home')->orderBy('title')->get(),
-            'galleries' => Gallery::query()->orderBy('title')->get(),
+            'galleries' => Gallery::query()->ordered()->get(),
         ];
     }
 

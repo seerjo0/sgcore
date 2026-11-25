@@ -12,13 +12,60 @@ use Illuminate\View\View;
 class GalleryController extends Controller
 {
     /**
-     * List all galleries.
+     * List all galleries in their display order (the arrows next to each
+     * row define what themes/modules show first).
      */
     public function index(): View
     {
-        $galleries = Gallery::withCount('items')->orderBy('title')->paginate(15);
+        $galleries = Gallery::withCount('items')->ordered()->paginate(15);
 
         return view('media::galleries.index', compact('galleries'));
+    }
+
+    /**
+     * Move a gallery up/down in the public display order (themes, pickers
+     * and modules list galleries through the arrows chosen here).
+     */
+    public function move(Request $request, Gallery $gallery): RedirectResponse
+    {
+        $direction = $request->input('direcao');
+
+        if (! in_array($direction, ['up', 'down'], true)) {
+            return back();
+        }
+
+        $galleries = Gallery::query()->ordered()->get()->values();
+
+        $index = $galleries->search(fn (Gallery $candidate): bool => $candidate->is($gallery));
+
+        if ($index === false) {
+            return back();
+        }
+
+        $target = $direction === 'up' ? $index - 1 : $index + 1;
+
+        if ($target < 0 || $target >= $galleries->count()) {
+            return back();
+        }
+
+        // Renormaliza 1..n antes de trocar — swaps funcionam mesmo com
+        // sort_order duplicado (linhas antigas com default 0).
+        foreach ($galleries as $position => $candidate) {
+            if ((int) $candidate->sort_order !== $position + 1) {
+                $candidate->sort_order = $position + 1;
+                $candidate->save();
+            }
+        }
+
+        $swap = $galleries[$target];
+        $gallery->sort_order = $target + 1;
+        $swap->sort_order = $index + 1;
+        $gallery->save();
+        $swap->save();
+
+        return redirect()
+            ->route('admin.galerias.index')
+            ->with('success', __('galleries.order_updated'));
     }
 
     /**
@@ -30,7 +77,8 @@ class GalleryController extends Controller
     }
 
     /**
-     * Persist a new gallery.
+     * Persist a new gallery. It enters FIRST (the historic public order —
+     * newest on top), so the upgrade changes nothing; the arrows reorder it.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -38,7 +86,11 @@ class GalleryController extends Controller
             'title' => ['required', 'string', 'max:255'],
         ]);
 
+        Gallery::query()->increment('sort_order');
+
         $gallery = Gallery::create($data);
+        $gallery->sort_order = 1;
+        $gallery->save();
 
         return redirect()
             ->route('admin.galerias.edit', $gallery)

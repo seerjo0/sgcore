@@ -21,6 +21,7 @@ Route::middleware('can:manage-media')->group(function (): void {
         Route::get('/{gallery}/editar', [GalleryController::class, 'edit'])->name('edit');
         Route::put('/{gallery}', [GalleryController::class, 'update'])->name('update');
         Route::delete('/{gallery}', [GalleryController::class, 'destroy'])->name('destroy');
+        Route::post('/{gallery}/mover', [GalleryController::class, 'move'])->name('mover');
 
         Route::post('/{gallery}/itens', [GalleryController::class, 'storeItem'])->name('itens.store');
 

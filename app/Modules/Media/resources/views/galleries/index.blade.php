@@ -23,6 +23,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
+                        <th class="px-4 py-3 text-center">{{ __('galleries.order') }}</th>
                         <th class="px-4 py-3">{{ __('galleries.title') }}</th>
                         <th class="px-4 py-3">{{ __('galleries.images') }}</th>
                         <th class="px-4 py-3 text-right">{{ __('common.actions') }}</th>
@@ -31,6 +32,28 @@
                 <tbody class="divide-y divide-slate-100">
                     @foreach ($galleries as $gallery)
                         <tr>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-center gap-1">
+                                    <form method="POST" action="{{ route('admin.galerias.mover', $gallery) }}" class="inline">
+                                        @csrf
+                                        <input type="hidden" name="direcao" value="up">
+                                        <button type="submit" aria-label="{{ __('galleries.move_up') }}" title="{{ __('galleries.move_up') }}"
+                                                @disabled($loop->first && $galleries->onFirstPage())
+                                                class="grid h-7 w-7 place-items-center rounded border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-default disabled:opacity-30">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('admin.galerias.mover', $gallery) }}" class="inline">
+                                        @csrf
+                                        <input type="hidden" name="direcao" value="down">
+                                        <button type="submit" aria-label="{{ __('galleries.move_down') }}" title="{{ __('galleries.move_down') }}"
+                                                @disabled($loop->last && ! $galleries->hasMorePages())
+                                                class="grid h-7 w-7 place-items-center rounded border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-default disabled:opacity-30">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                             <td class="px-4 py-3 font-medium">{{ $gallery->title }}</td>
                             <td class="px-4 py-3 text-slate-500">{{ $gallery->items_count }}</td>
                             <td class="px-4 py-3 text-right">
