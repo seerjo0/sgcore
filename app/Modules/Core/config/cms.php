@@ -31,6 +31,7 @@ return [
 
     'media' => [
         'max_upload_bytes' => env('CMS_MEDIA_MAX_UPLOAD_BYTES', 10 * 1024 * 1024),
+        'max_video_bytes' => env('CMS_MEDIA_MAX_VIDEO_BYTES', 100 * 1024 * 1024),
         'max_dimension' => env('CMS_MEDIA_MAX_DIMENSION', 2000),
         'quality' => env('CMS_MEDIA_QUALITY', 85),
     ],

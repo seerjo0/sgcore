@@ -8,6 +8,7 @@
         'one_selected' => __('media.one_selected'),
         'many_selected' => __('media.many_selected'),
         'close' => __('common.close'),
+        'videoBadge' => __('media.badge_video'),
     ];
 @endphp
 
@@ -124,7 +125,9 @@
                             (mode === 'multi' ? ' name="media_ids[]"' : ' name="media_single"') +
                             ' value="' + item.id + '" data-url="' + item.url + '"' + checked +
                             ' class="hidden" onchange="onMediaPick(this)">' +
-                        '<img src="' + item.url + '" alt="' + escapeHtml(item.alt || item.filename) + '" loading="lazy" class="h-28 w-full object-cover">' +
+                        (item.type === 'video'
+                            ? '<span class="relative block bg-slate-900"><video src="' + item.url + '#t=0.5" preload="metadata" muted playsinline class="h-28 w-full object-contain"></video><span class="absolute left-1 top-1 rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">' + pickerStrings.videoBadge + '</span></span>'
+                            : '<img src="' + item.url + '" alt="' + escapeHtml(item.alt || item.filename) + '" loading="lazy" class="h-28 w-full object-cover">') +
                         '<span class="block truncate px-1 py-1 text-xs text-slate-500">' + escapeHtml(item.filename) + '</span>' +
                     '</label>';
             }).join('');

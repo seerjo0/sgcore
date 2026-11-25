@@ -3,6 +3,7 @@
 namespace App\Modules\Media\Http\Controllers\Admin;
 
 use App\Modules\Media\Models\Medium;
+use App\Modules\Media\Rules\ValidMediaUpload;
 use App\Modules\Media\Services\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,15 +42,13 @@ class MediaController extends Controller
     }
 
     /**
-     * Store one or more uploaded images.
+     * Store one or more uploaded files (images or videos).
      */
     public function store(Request $request): JsonResponse|RedirectResponse
     {
-        $maxKb = (int) floor(((int) config('cms.media.max_upload_bytes')) / 1024);
-
         $request->validate([
             'files' => ['required', 'array', 'min:1'],
-            'files.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif', 'max:'.$maxKb],
+            'files.*' => ['file', new ValidMediaUpload],
         ]);
 
         $userId = $request->user()?->id;
@@ -76,6 +75,7 @@ class MediaController extends Controller
                     'filename' => $medium->filename,
                     'alt' => $medium->alt,
                     'caption' => $medium->caption,
+                    'type' => $medium->kind(),
                 ], $stored),
             ]);
         }
@@ -110,6 +110,7 @@ class MediaController extends Controller
                 'filename' => $medium->filename,
                 'alt' => $medium->alt,
                 'caption' => $medium->caption,
+                'type' => $medium->kind(),
             ]),
             'current_page' => $media->currentPage(),
             'last_page' => $media->lastPage(),

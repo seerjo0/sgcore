@@ -42,8 +42,13 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             @foreach ($gallery->items as $item)
                 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                    <img src="{{ $item->media?->url() }}" alt="{{ $item->media?->alt ?? '' }}" loading="lazy"
-                         class="h-36 w-full object-cover bg-slate-50">
+                    @if ($item->media?->isVideo())
+                        <video src="{{ $item->media->url() }}#t=0.5" preload="metadata" muted playsinline
+                               class="h-36 w-full bg-slate-900 object-contain"></video>
+                    @else
+                        <img src="{{ $item->media?->url() }}" alt="{{ $item->media?->alt ?? '' }}" loading="lazy"
+                             class="h-36 w-full object-cover bg-slate-50">
+                    @endif
 
                     <div class="p-3">
                         <form method="POST" action="{{ route('admin.galerias.itens.update', [$gallery, $item]) }}">

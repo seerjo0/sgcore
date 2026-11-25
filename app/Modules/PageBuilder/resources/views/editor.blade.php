@@ -68,6 +68,9 @@
         .pb-media-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 0 14px 14px; overflow-y: auto; }
         .pb-media-tile { padding: 0; overflow: hidden; cursor: pointer; background: #fff; border: 2px solid #e2e8f0; border-radius: 8px; }
         .pb-media-tile img { display: block; width: 100%; height: 96px; object-fit: cover; }
+        .pb-media-video { display: block; position: relative; background: #0f172a; }
+        .pb-media-video video { display: block; width: 100%; height: 96px; object-fit: contain; }
+        .pb-media-video-badge { position: absolute; left: 6px; top: 6px; border-radius: 4px; background: rgb(15 23 42 / .8); padding: 1px 6px; font-size: 10px; font-weight: 600; color: #fff; }
         .pb-media-tile span { display: block; padding: 4px 6px; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pb-media-tile.is-active { border-color: #2563eb; box-shadow: 0 0 0 2px rgb(37 99 235 / .35); }
         .pb-media-msg { grid-column: 1 / -1; padding: 24px 0; text-align: center; color: #94a3b8; font-size: 13px; }
@@ -252,6 +255,7 @@
                 'mediaLoading' => __('media.loading'),
                 'mediaEmpty' => __('media.no_results'),
                 'mediaError' => __('media.load_error'),
+                'mediaVideoBadge' => __('media.badge_video'),
                 'mediaClose' => __('common.close'),
                 'layersTitle' => __('pagebuilder.layers_title'),
                 'layersClose' => __('pagebuilder.layers_close'),

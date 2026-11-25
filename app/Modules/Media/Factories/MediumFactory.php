@@ -48,4 +48,20 @@ class MediumFactory extends Factory
             'path' => now()->format('Y').'/'.now()->format('m').'/'.Str::random(40).'.png',
         ]);
     }
+
+    /**
+     * Indicate that the file is a video (stored verbatim, no dimensions).
+     */
+    public function video(string $mime = 'video/mp4'): static
+    {
+        $extension = ['video/mp4' => 'mp4', 'video/webm' => 'webm', 'video/quicktime' => 'mov', 'video/ogg' => 'ogv'][$mime] ?? 'mp4';
+
+        return $this->state(fn (array $attributes) => [
+            'mime_type' => $mime,
+            'filename' => 'video.'.$extension,
+            'path' => now()->format('Y').'/'.now()->format('m').'/'.Str::random(40).'.'.$extension,
+            'width' => null,
+            'height' => null,
+        ]);
+    }
 }

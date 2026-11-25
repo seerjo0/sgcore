@@ -178,7 +178,9 @@ import 'grapesjs/dist/css/grapes.min.css';
 
             grid.innerHTML = items.map((item) => '<button type="button" class="pb-media-tile" data-id="' + item.id
                 + '" data-url="' + escapeHtml(item.url) + '" data-alt="' + escapeHtml(item.alt || item.filename) + '">'
-                + '<img src="' + escapeHtml(item.url) + '" alt="" loading="lazy">'
+                + (item.type === 'video'
+                    ? '<span class="pb-media-video"><video src="' + escapeHtml(item.url) + '#t=0.5" preload="metadata" muted playsinline></video><span class="pb-media-video-badge">' + escapeHtml(S.mediaVideoBadge) + '</span></span>'
+                    : '<img src="' + escapeHtml(item.url) + '" alt="" loading="lazy">')
                 + '<span>' + escapeHtml(item.filename) + '</span></button>').join('');
 
             grid.querySelectorAll('.pb-media-tile').forEach((tile) => {

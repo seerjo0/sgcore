@@ -58,6 +58,25 @@ class Medium extends Model
         return '/media/'.$this->path;
     }
 
+    public function isVideo(): bool
+    {
+        return str_starts_with((string) $this->mime_type, 'video/');
+    }
+
+    public function isImage(): bool
+    {
+        return str_starts_with((string) $this->mime_type, 'image/');
+    }
+
+    /**
+     * 'video' | 'image' — what the library grid, the picker and the editor's
+     * media browser render for this record.
+     */
+    public function kind(): string
+    {
+        return $this->isVideo() ? 'video' : 'image';
+    }
+
     /**
      * User who uploaded the file.
      */

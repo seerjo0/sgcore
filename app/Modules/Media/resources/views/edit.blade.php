@@ -7,8 +7,15 @@
 
     <div class="grid max-w-4xl gap-6 lg:grid-cols-2">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <img src="{{ $medium->url() }}" alt="{{ $medium->alt ?? $medium->filename }}"
-                 class="max-h-96 w-full rounded object-contain bg-slate-50">
+            @if ($medium->isVideo())
+                <video src="{{ $medium->url() }}" controls preload="metadata"
+                       class="max-h-96 w-full rounded bg-slate-900">
+                    {{ __('media.video_not_supported') }}
+                </video>
+            @else
+                <img src="{{ $medium->url() }}" alt="{{ $medium->alt ?? $medium->filename }}"
+                     class="max-h-96 w-full rounded object-contain bg-slate-50">
+            @endif
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">

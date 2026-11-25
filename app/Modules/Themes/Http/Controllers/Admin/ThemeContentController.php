@@ -162,7 +162,7 @@ class ThemeContentController extends Controller
         $value = is_scalar($value) ? (string) $value : '';
 
         return match ($type) {
-            'image', 'logo' => $this->cleanMediaId($value, 'Selecione uma imagem válida da biblioteca.'),
+            'image', 'logo' => $this->cleanMediaId($value, 'Selecione uma imagem válida da biblioteca.', imagesOnly: true),
             'gallery' => $this->cleanMediaId($value, 'Selecione uma galeria válida.', Gallery::class),
             'richtext' => $this->cleanRichtext($value),
             default => $this->cleanText($value),
@@ -201,7 +201,7 @@ class ThemeContentController extends Controller
      * @param  class-string<Model>|null  $model
      * @return array{0: mixed, 1: ?string}
      */
-    private function cleanMediaId(string $value, string $message, ?string $model = Medium::class): array
+    private function cleanMediaId(string $value, string $message, ?string $model = Medium::class, bool $imagesOnly = false): array
     {
         $value = trim($value);
 
@@ -211,7 +211,19 @@ class ThemeContentController extends Controller
 
         $id = (int) $value;
 
-        if ($id <= 0 || $model === null || $model::query()->find($id) === null) {
+        if ($id <= 0 || $model === null) {
+            return [null, $message];
+        }
+
+        $record = $model::query()->find($id);
+
+        if ($record === null) {
+            return [null, $message];
+        }
+
+        // Image/logo slots must point at a picture — never a video file,
+        // which would render as a broken <img> on the public site.
+        if ($imagesOnly && $record instanceof Medium && ! $record->isImage()) {
             return [null, $message];
         }
 

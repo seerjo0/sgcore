@@ -20,13 +20,14 @@
         <p class="mb-3 text-sm text-slate-500">
             {{ __('media.upload_help', [
                 'maxMB' => (int) floor(config('cms.media.max_upload_bytes') / 1048576),
+                'maxVidMB' => (int) floor(config('cms.media.max_video_bytes') / 1048576),
                 'maxDim' => config('cms.media.max_dimension'),
             ]) }}
         </p>
         <form method="POST" action="{{ route('admin.midia.store') }}" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3">
             @csrf
             <input type="file" name="files[]" multiple required
-                   accept="image/jpeg,image/png,image/webp,image/gif"
+                   accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/ogg"
                    class="text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-500">
             <button type="submit"
                     class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
@@ -49,14 +50,24 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             @foreach ($media as $item)
                 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                    <a href="{{ $item->url() }}" target="_blank" rel="noopener">
-                        <img src="{{ $item->url() }}" alt="{{ $item->alt ?? $item->filename }}" loading="lazy"
-                             class="h-36 w-full object-cover">
+                    <a href="{{ $item->url() }}" target="_blank" rel="noopener" class="relative block bg-slate-900">
+                        @if ($item->isVideo())
+                            <video src="{{ $item->url() }}#t=0.5" preload="metadata" muted playsinline
+                                   class="h-36 w-full object-contain">
+                                {{ __('media.video_not_supported') }}
+                            </video>
+                            <span class="absolute left-2 top-2 rounded bg-slate-900/80 px-2 py-0.5 text-xs font-semibold text-white">{{ __('media.badge_video') }}</span>
+                        @else
+                            <img src="{{ $item->url() }}" alt="{{ $item->alt ?? $item->filename }}" loading="lazy"
+                                 class="h-36 w-full object-cover">
+                        @endif
                     </a>
                     <div class="p-3">
                         <p class="truncate text-sm font-medium" title="{{ $item->filename }}">{{ $item->filename }}</p>
                         <p class="text-xs text-slate-400">
-                            {{ $item->width }}×{{ $item->height }} · {{ number_format($item->size / 1024, 0, ',', '.') }} KB
+                            {{ $item->isVideo()
+                                ? __('media.meta_video', ['size' => number_format($item->size / 1048576, 1, ',', '.')])
+                                : __('media.meta_image', ['width' => $item->width, 'height' => $item->height, 'size' => number_format($item->size / 1024, 0, ',', '.')]) }}
                         </p>
                         <div class="mt-2 flex items-center justify-between text-sm">
                             <a href="{{ route('admin.midia.edit', $item) }}" class="font-medium text-primary-600 hover:text-primary-500">{{ __('common.edit') }}</a>

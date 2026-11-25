@@ -469,10 +469,18 @@ class ThemeRenderer
 
             $figure = $doc->createElement('figure');
 
-            $img = $doc->createElement('img');
-            $img->setAttribute('src', '/media/'.$media->path);
-            $img->setAttribute('alt', trim((string) ($item->caption ?: $media->alt ?: '')));
-            $figure->appendChild($img);
+            if ($media->isVideo()) {
+                $video = $doc->createElement('video');
+                $video->setAttribute('src', '/media/'.$media->path);
+                $video->setAttribute('controls', 'controls');
+                $video->setAttribute('preload', 'metadata');
+                $figure->appendChild($video);
+            } else {
+                $img = $doc->createElement('img');
+                $img->setAttribute('src', '/media/'.$media->path);
+                $img->setAttribute('alt', trim((string) ($item->caption ?: $media->alt ?: '')));
+                $figure->appendChild($img);
+            }
 
             $caption = trim((string) $item->caption);
 
